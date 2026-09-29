@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Radio La Gota 107.5 FM</title>
+<meta name="description" content="Escuchá Radio La Gota Que Faltaba 107.5 FM en vivo, las 24 horas, desde tu celular.">
+
+<!-- Estas etiquetas son las que arman la vista previa (imagen, título,
+     descripción) cuando alguien comparte este link por WhatsApp,
+     Facebook o Instagram -antes no estaban, y el link se compartía
+     "pelado", sin ninguna imagen ni texto. -->
+<meta property="og:title" content="Radio La Gota 107.5 FM">
+<meta property="og:description" content="Escuchá Radio La Gota Que Faltaba en vivo, las 24 horas, desde tu celular.">
+<meta property="og:image" content="https://i.imgur.com/sJFQNSB.jpeg">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://radio.lagota.online/">
+
+<link rel="icon" sizes="192x192" href="https://i.imgur.com/sJFQNSB.jpeg">
+<link rel="icon" sizes="512x512" href="https://i.imgur.com/sJFQNSB.jpeg">
+<link rel="apple-touch-icon" href="https://i.imgur.com/sJFQNSB.jpeg">
+
+<link rel="manifest" href="manifest.json">
+<script>
+let eventoInstalar;
+document.addEventListener("DOMContentLoaded", function() {
+  const botonInstalar = document.getElementById("botonInstalar");
+  botonInstalar.style.display = "none";
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    eventoInstalar = e;
+    botonInstalar.style.display = "inline-flex";
+  });
+
+  window.addEventListener("appinstalled", () => {
+    eventoInstalar = null;
+    botonInstalar.style.display = "none";
+  });
+
+  botonInstalar.addEventListener("click", async () => {
+    if (!eventoInstalar) {
+      alert("✅ La aplicación ya está instalada en tu teléfono");
+      return;
+    }
+    const { outcome } = await eventoInstalar.prompt();
+    if (outcome === "accepted") eventoInstalar = null;
+  });
+});
+</script>
+
+<meta name="theme-color" content="#0a0a1a">
+<style>
+* {margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif;}
+body {
+  background: #0a0a1a;
+  color: #fff;
+  padding: 12px;
+  padding-bottom: 40px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.ondas-fondo {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  opacity: 0.25;
+}
+.onda {
+  position: absolute;
+  width: 200%;
+  height: 100px;
+  background: linear-gradient(90deg, transparent, #00d2ff, transparent);
+  border-radius: 50%;
+  animation: moverOnda 8s linear infinite;
+  transform-origin: center;
+}
+.onda:nth-child(2) { top: 25%; animation-delay: 2.5s; opacity: 0.2; }
+.onda:nth-child(3) { top: 50%; animation-delay: 5s; opacity: 0.15; }
+@keyframes moverOnda {
+  0% { transform: translateX(-50%) rotate(0deg); }
+  100% { transform: translateX(-50%) rotate(360deg); }
+}
+
+.contenedor {
+  max-width: 460px;
+  margin: auto;
+  position: relative;
+  z-index: 2;
+  padding: 8px;
+  text-align: center;
+}
+
+.reproductor {
+  background: linear-gradient(180deg, #101022, #1a1a36);
+  border-radius: 20px;
+  padding: 20px 15px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(0, 210, 255, 0.2);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5), 0 0 16px rgba(0, 210, 255, 0.15);
+  position: relative;
+}
+
+.logo-vigia {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  color: #111;
+}
+
+.logo-central-con-rayos {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin: 20px auto 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rayos {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  animation: girar 8s linear infinite;
+}
+.rayos span {
+  position: absolute;
+  width: 4px;
+  height: 30px;
+  background: linear-gradient(#0099ff, #00ffff, #0066cc);
+  left: 50%;
+  transform-origin: center 75px;
+  border-radius: 2px;
+  animation: cambiar-color 3s ease infinite;
+}
+.rayos span:nth-child(1) { transform: rotate(0deg) translateX(-50%); }
+.rayos span:nth-child(2) { transform: rotate(30deg) translateX(-50%); }
+.rayos span:nth-child(3) { transform: rotate(60deg) translateX(-50%); }
+.rayos span:nth-child(4) { transform: rotate(90deg) translateX(-50%); }
+.rayos span:nth-child(5) { transform: rotate(120deg) translateX(-50%); }
+.rayos span:nth-child(6) { transform: rotate(150deg) translateX(-50%); }
+.rayos span:nth-child(7) { transform: rotate(180deg) translateX(-50%); }
+.rayos span:nth-child(8) { transform: rotate(210deg) translateX(-50%); }
+.rayos span:nth-child(9) { transform: rotate(240deg) translateX(-50%); }
+.rayos span:nth-child(10) { transform: rotate(270deg) translateX(-50%); }
+.rayos span:nth-child(11) { transform: rotate(300deg) translateX(-50%); }
+.rayos span:nth-child(12) { transform: rotate(330deg) translateX(-50%); }
+
+.logo-reproductor {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #000;
+  z-index: 2;
+  animation: palpitar 2s ease-in-out infinite alternate;
+}
+
+.titulo-radio {
+  font-size: 24px;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #66ccff, #0066cc, #001a4d, #0066cc, #66ccff);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: brillo-texto 3s linear infinite;
+  margin-bottom: 15px;
+  letter-spacing: 1px;
+}
+
+.controles-principales {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+.btn-play {
+  width: 50px;
+  height: 50px;
+  background: #0066cc;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.volumen {
+  flex: 1;
+  max-width: 160px;
+  height: 6px;
+  border-radius: 3px;
+  background: #333;
+  outline: none;
+  -webkit-appearance: none;
+}
+.volumen::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  background: #0099ff;
+  cursor: pointer;
+}
+
+.botones-reproductor {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.btn {
+  min-width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  padding: 0 6px;
+  font-weight: bold;
+}
+.fb { background: #1877f2; }
+.ig { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+.tt { background: #000; border: 1px solid #333; }
+.wa-tema { background: #25d366; }
+.wa-comercial { background: #25d366; }
+.compartir { background: #00b4d8; }
+
+.boton-mercadopago {
+  width: 31%;
+  padding: 12px 6px;
+  font-size: 13px;
+  font-weight: bold;
+  background: linear-gradient(90deg, #009ee3, #00b1ea);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  cursor: pointer;
+}
+.boton-instalar {
+  width: 31%;
+  padding: 12px 6px;
+  font-size: 13px;
+  font-weight: bold;
+  background: linear-gradient(90deg, #ff9500, #ffcc00);
+  border: none;
+  border-radius: 12px;
+  color: #000;
+  cursor: pointer;
+}
+.boton-tomar-senal {
+  width: 31%;
+  padding: 12px 6px;
+  font-size: 13px;
+  font-weight: bold;
+  background: linear-gradient(90deg, #00b188, #00c497);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.seccion-desplegable {
+  background: rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 20px;
+  display: none;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+.seccion-desplegable h5 { color: #00e5ff; margin-bottom: 10px; font-size: 15px; }
+.texto-dato { font-size: 16px; font-weight: bold; color: #fff; background: rgba(0,158,227,0.15); padding: 10px; border-radius: 8px; margin-bottom: 12px; word-break: break-all; }
+.btn-copiar { background: #34d399; border: none; border-radius: 8px; padding: 8px 16px; font-weight: bold; cursor: pointer; color: #000; }
+.info-texto-pequeno { font-size: 12px; color: #a5b4fc; margin-top: 8px; line-height: 1.4; }
+.dato-comprobante { margin-top: 10px; padding: 8px; background: rgba(255,193,7,0.12); border-radius: 6px; font-size: 13px; color: #ffd54f; font-weight: 500; }
+
+.reproductor-demo {
+  background: rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+.reproductor-demo h4 { font-size: 14px; color: #a5b4fc; margin-bottom: 8px; }
+audio { width: 100%; height: 36px; }
+
+.boton-principal-descarga {
+  width: 100%;
+  padding: 16px 12px;
+  font-size: 18px;
+  font-weight: bold;
+  background: linear-gradient(90deg, #f59e0b, #eab308);
+  border: none;
+  border-radius: 14px;
+  color: #000;
+  margin: 15px 0;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  cursor: pointer;
+}
+
+.fila-dias { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 15px 0; }
+.btn-dia { padding: 10px 4px; border-radius: 8px; border: none; font-weight: bold; font-size: 12px; cursor: pointer; background: #2d3748; color: #e2e8f0; }
+.btn-dia.activo { background: linear-gradient(135deg, #0088ff, #00d2ff); color: #000; box-shadow: 0 0 8px rgba(0,210,255,0.4); }
+.boton-bloque { width: 100%; padding: 14px 10px; font-size: 16px; font-weight: bold; background: linear-gradient(90deg, #f59e0b, #eab308); border: none; border-radius: 12px; color: #000; margin: 8px 0; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.25); cursor: pointer; }
+
+.caja-acceso { background: rgba(255,255,255,0.08); border-radius: 14px; padding: 16px; margin-bottom: 20px; display: none; text-align: center; border: 1px solid rgba(255,255,255,0.15); }
+.caja-acceso input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: none; background: #1a1a36; color: #fff; font-size: 15px; }
+.btn-ingresar { width: 100%; padding: 12px; margin-top: 10px; background: #34d399; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
+.mensaje-info { margin-top: 12px; color: #a5b4fc; font-size: 13px; line-height: 1.5; }
+.mensaje-error { margin-top: 8px; color: #ef4444; font-size: 13px; }
+
+.info-texto { background: rgba(255,215,0,0.12); border: 1px solid rgba(255,215,0,0.5); padding: 16px; border-radius: 10px; margin: 24px 0; font-size: 14px; line-height: 1.7; color: #fffbda; text-align: left; }
+.info-texto h4 { margin: 0 0 10px 0; color: #ffdd44; font-size: 15px; }
+.pie-pagina { font-size: 13px; color: #cce0ff; text-align: center; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.15); line-height: 1.6; }
+
+/* Cuando la pestaña/app no está visible, se frenan las animaciones
+   decorativas (el script de más abajo agrega esta clase): no se ven
+   igual, y así no gastan batería de más mientras la radio sigue
+   sonando de fondo. */
+body.en-pausa-visual .onda,
+body.en-pausa-visual .rayos,
+body.en-pausa-visual .rayos span,
+body.en-pausa-visual .logo-reproductor,
+body.en-pausa-visual .titulo-radio {
+  animation-play-state: paused;
+}
+
+@keyframes girar { to { transform: rotate(360deg); } }
+@keyframes cambiar-color { 0%{filter:hue-rotate(0deg)} 100%{filter:hue-rotate(360deg)} }
+@keyframes palpitar { 0%{transform:scale(1)} 100%{transform:scale(1.05)} }
+@keyframes brillo-texto { to { background-position: 200% center; } }
+</style>
+</head>
+<body>
+
+<div class="ondas-fondo">
+  <div class="onda"></div>
+  <div class="onda"></div>
+  <div class="onda"></div>
+</div>
+
+<div class="contenedor">
+
+  <div class="reproductor">
+    <div class="logo-vigia">👁️</div>
+
+    <div class="logo-central-con-rayos">
+      <div class="rayos">
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <img class="logo-reproductor" src="https://i.imgur.com/sJFQNSB.jpeg" alt="La Gota Que Faltaba">
+    </div>
+
+    <div class="titulo-radio">La Gota Que Faltaba</div>
+
+    <div class="controles-principales">
+      <button class="btn-play" id="btnPlay">▶</button>
+      <input type="range" class="volumen" id="volumenControl" min="0" max="100" value="80">
+    </div>
+
+    <div class="botones-reproductor">
+      <a href="https://www.facebook.com/turadiolagota" class="btn fb" target="_blank" aria-label="Facebook">FB</a>
+      <a href="https://www.instagram.com/lag.otaquefaltaba?igsh=MW84NXBjOXFwdTdp" class="btn ig" target="_blank" aria-label="Instagram">IG</a>
+      <a href="https://www.tiktok.com/@lagotaquefaltaba" class="btn tt" target="_blank" aria-label="TikTok">TT</a>
+      <a href="https://wa.me/5493462344790?text=Hola!%20Quiero%20pedir%20este%20tema" class="btn wa-tema" target="_blank" aria-label="Pedir un tema por WhatsApp">Pedir Tema</a>
+      <a href="https://wa.me/543462598048" class="btn wa-comercial" target="_blank" aria-label="Contacto comercial por WhatsApp">Comercial</a>
+      <a href="#" class="btn compartir" onclick="compartirApp()" aria-label="Compartir la app">🔗</a>
+    </div>
+
+    <audio id="reproductor" preload="none" crossorigin="anonymous">
+      <source src="https://lagota.online:8000/lagota" type="audio/mpeg">
+      Tu navegador no soporta reproducción.
+    </audio>
+  </div>
+
+  <div style="display:flex; justify-content:center; gap:2%; flex-wrap:wrap;">
+    <button class="boton-mercadopago" onclick="mostrarSeccion('seccionPago')">💳 Pagar</button>
+    <button class="boton-instalar" id="botonInstalar">📲 Instalar</button>
+    <button class="boton-tomar-senal" onclick="mostrarSeccion('seccionSenal')">📡 Tomar señal</button>
+  </div>
+
+  <div class="seccion-desplegable" id="seccionPago">
+    <h5>Datos para transferir</h5>
+    <div class="texto-dato">radiolagota</div>
+    <button class="btn-copiar" onclick="navigator.clipboard.writeText('radiolagota').then(()=>alert('Copiado'))">📋 Copiar alias</button>
+    <p class="info-texto-pequeno">Alias: radiolagota • Mercado Pago</p>
+    <div class="dato-comprobante">📩 Enviar comprobante al: 03462 598048</div>
+  </div>
+
+  <div class="seccion-desplegable" id="seccionSenal">
+    <h5>URL directa de la señal</h5>
+    <div class="texto-dato">https://lagota.online:8000/lagota</div>
+    <button class="btn-copiar" onclick="navigator.clipboard.writeText('https://lagota.online:8000/lagota').then(()=>alert('Copiado'))">📋 Copiar URL</button>
+  </div>
+
+  <div class="reproductor-demo">
+    <h4>🎧 Escuchar demo del programa</h4>
+    <audio controls preload="metadata">
+      <source src="https://www.dropbox.com/scl/fi/jldzsfc5qxyc6t8eohoow/demo.mp3?rlkey=9gg2ke59f1q9t2bkb0mrlbtkx&raw=1">
+    </audio>
+  </div>
+
+  <button class="boton-principal-descarga" onclick="document.getElementById('cajaAcceso').style.display = document.getElementById('cajaAcceso').style.display === 'block' ? 'none' : 'block'">📥 ACCESO A PROGRAMAS POR DÍA</button>
+
+  <div class="caja-acceso" id="cajaAcceso">
+    <h4>🔒 Acceso exclusivo para emisoras autorizadas</h4>
+    <p class="info-texto-pequeno">Ingresá tu usuario y contraseña para descargar</p>
+    <input type="text" id="usuario" placeholder="Usuario">
+    <input type="password" id="clave" placeholder="Contraseña">
+    <button class="btn-ingresar" onclick="verificarAcceso()">Ingresar</button>
+    <div id="mensajeError" class="mensaje-error"></div>
+    <div id="zonaDescarga" style="display:none; margin-top:15px;">
+      <p style="color:#34d399; font-weight:bold;">✅ Acceso correcto</p>
+      <div class="fila-dias">
+        <button class="btn-dia" onclick="cambiarDia('lunes', this)">Lun</button>
+        <button class="btn-dia" onclick="cambiarDia('martes', this)">Mar</button>
+        <button class="btn-dia" onclick="cambiarDia('miercoles', this)">Mié</button>
+        <button class="btn-dia" onclick="cambiarDia('jueves', this)">Jue</button>
+        <button class="btn-dia" onclick="cambiarDia('viernes', this)">Vie</button>
+      </div>
+      <div id="contenedorBloques"></div>
+      <p class="mensaje-info">ℹ️ Disponible desde el domingo para organizar la semana.</p>
+    </div>
+  </div>
+
+  <div class="info-texto">
+    <h4>¿Cómo instalar la App?</h4>
+    • Si usás Facebook: Tocá los 3 puntitos → Ir a navegador.<br>
+    • Si no ves "Instalar": Tocá 3 puntitos → Agregar a pantalla de inicio.<br>
+    • Soporte: 📞 3462 598048
+  </div>
+
+  <div class="pie-pagina">
+    © Desarrollado por El Vigía<br>
+    Si querés tu propia aplicación, comunicate al: +54 9 3462 598048 - Argentina
+  </div>
+
+</div>
+
+<script>
+const audio = document.getElementById('reproductor');
+const btnPlay = document.getElementById('btnPlay');
+const volumenControl = document.getElementById('volumenControl');
+let reproduciendo = false;
+const fuentes = ["https://lagota.online:8000/lagota"];
+
+// ------------------------------------------------------------------
+// Que la radio NO se corte al pasar a otra app o bloquear la pantalla
+// ------------------------------------------------------------------
+// Antes, apenas el celular mandaba la página a segundo plano, el
+// sistema operativo cortaba el audio sin avisar: para el celular, esta
+// página era "una pestaña más", no algo que estuviera reproduciendo
+// contenido real. Dos cosas lo arreglan:
+//
+// 1) Media Session: le informa al sistema operativo que hay audio de
+//    verdad sonando (aparece en la pantalla de bloqueo con nombre e
+//    ícono, como cualquier app de música), y con eso tanto Android
+//    como iPhone dejan de tratarlo como "una pestaña web cualquiera".
+// 2) Reconexión automática: si la señal se corta sola (pasa seguido
+//    en segundo plano, cuando el sistema le baja los recursos a la
+//    app por un instante), antes quedaba mudo hasta que alguien volvía
+//    y apretaba Play a mano. Ahora se reconecta solo.
+let debeSonar = false;         // lo que el usuario ELIGIÓ (no lo que está pasando en este instante)
+let intentosReconexion = 0;
+let timerReconexion = null;
+
+function actualizarEstadoMediaSession(estado) {
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = estado;
+}
+
+function iniciarReproduccion() {
+  debeSonar = true;
+  clearTimeout(timerReconexion);
+  timerReconexion = null;
+  audio.volume = volumenControl.value / 100;
+  // El "_t=" al final es para forzar una conexión NUEVA de verdad,
+  // no una copia vieja que el navegador tuviera guardada.
+  audio.src = fuentes[0] + (fuentes[0].includes('?') ? '&' : '?') + '_t=' + Date.now();
+  audio.load();
+  const intento = audio.play();
+  if (intento && intento.then) {
+    intento.then(() => {
+      btnPlay.textContent = '⏸';
+      reproduciendo = true;
+      intentosReconexion = 0;
+      actualizarEstadoMediaSession('playing');
+    }).catch(() => {
+      debeSonar = false;
+      reproduciendo = false;
+      btnPlay.textContent = '▶';
+      alert("No se pudo conectar a la señal");
+    });
+  }
+}
+
+function detenerReproduccion() {
+  debeSonar = false;  // ESTO va primero: así el evento "pause" de abajo sabe que fue el usuario, no un corte
+  clearTimeout(timerReconexion);
+  timerReconexion = null;
+  audio.pause();
+  reproduciendo = false;
+  btnPlay.textContent = '▶';
+  actualizarEstadoMediaSession('paused');
+}
+
+btnPlay.addEventListener('click', () => {
+  if (!reproduciendo) iniciarReproduccion(); else detenerReproduccion();
+});
+
+// Si la señal se corta sola, reintenta -con una espera que va
+// creciendo (2s, 4s, 6s... hasta un tope de 15s) para no bombardear el
+// servidor de streaming si el corte se sostiene en el tiempo.
+function programarReconexion() {
+  if (!debeSonar || timerReconexion) return;
+  intentosReconexion++;
+  const espera = Math.min(15000, 2000 * intentosReconexion);
+  timerReconexion = setTimeout(() => {
+    timerReconexion = null;
+    if (debeSonar) iniciarReproduccion();
+  }, espera);
+}
+
+audio.addEventListener('error', programarReconexion);
+audio.addEventListener('stalled', programarReconexion);
+audio.addEventListener('ended', programarReconexion);
+audio.addEventListener('pause', () => {
+  // Un "pause" mientras debeSonar sigue en true significa que el
+  // corte lo hizo el sistema, no el usuario (eso ya puso debeSonar en
+  // false antes de pausar, en detenerReproduccion).
+  if (debeSonar) programarReconexion();
+});
+
+// Al volver a la pestaña/app (por ejemplo, saliendo de Facebook y
+// regresando), si debería estar sonando pero no está, se reconecta de
+// una -sin esperar a que llegue algún otro evento.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && debeSonar && audio.paused) {
+    clearTimeout(timerReconexion);
+    timerReconexion = null;
+    iniciarReproduccion();
+  }
+});
+
+// Controles en la pantalla de bloqueo / notificación del sistema
+if ('mediaSession' in navigator) {
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: 'Radio La Gota 107.5 FM',
+    artist: 'En vivo',
+    album: 'La Gota Que Faltaba',
+    artwork: [
+      { src: 'https://i.imgur.com/sJFQNSB.jpeg', sizes: '512x512', type: 'image/jpeg' }
+    ]
+  });
+  navigator.mediaSession.setActionHandler('play', iniciarReproduccion);
+  navigator.mediaSession.setActionHandler('pause', detenerReproduccion);
+}
+
+volumenControl.addEventListener('input', () => { audio.volume = volumenControl.value / 100; });
+
+// Pausar las animaciones decorativas de fondo (las ondas, los rayos
+// girando) cuando la pantalla no se ve -no aportan nada si nadie las
+// está mirando, y así se gasta menos batería mientras suena de fondo.
+document.addEventListener('visibilitychange', () => {
+  document.body.classList.toggle('en-pausa-visual', document.visibilityState !== 'visible');
+});
+
+// PWA de verdad: registrar el Service Worker (ver service-worker.js,
+// el mismo que ya usás para las notificaciones push de Firebase, con
+// esto agregado adentro) para que la app funcione como una app
+// instalada de verdad, no solo una página con un cartel de "instalar".
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {
+      // Si falla (por ejemplo, abriendo el archivo directo desde el
+      // disco en vez de un servidor), la radio sigue funcionando
+      // igual: el Service Worker es una mejora, no un requisito.
+    });
+  });
+}
+
+// Antes las 30 contraseñas estaban escritas tal cual acá (texto plano):
+// cualquiera que tocara "Ver código fuente" en el navegador las veía
+// todas, sin saber nada de programación. Ahora se guarda la "huella"
+// (hash) de cada una, no la contraseña -calcularHash() más abajo hace
+// la misma cuenta con lo que el usuario escribe, y se compara UNA
+// huella contra la otra. Ver esta lista ya no le sirve a nadie para
+// entrar. (Igual, como esta página no tiene servidor propio -vive en
+// GitHub Pages, que solo entrega archivos- una persona con
+// conocimientos técnicos y mucho empeño todavía podría probar
+// contraseñas por su cuenta y calcular ella misma los hashes para
+// comparar. Para que sea imposible de verdad hace falta un sistema
+// con servidor, que es otro proyecto.)
+const USUARIOS_HASH = {
+  "radio1": "ad5569b49703d11a572c3b6982c9d05adaaf5d62e1998cb82a31b8e494307012",
+  "radio2": "fb9ead1eb337519a017cab1080a4a5007ce1f0a804484d6b007376e80a07bf84",
+  "radio3": "d554b2983091246671ca34f9cf3d4d1b59ba5083711b8fe68295f39ee176461d",
+  "radio4": "35a7cdd44e7a1c606c95a1cb64cfbba9dddaf50f04f79380355ad1080bb9c55d",
+  "radio5": "8b6e2f2e7e91b5555f5622e7ebbf7962ee1b3f33a8162e6bff163a979edac8f0",
+  "radio6": "c69196f5d2e852641bff5fae0f60e85968f995daf48ff790eaf594bf4398cae1",
+  "radio7": "a3f8a61ce3797f115114b098323e66ec2b4d2c1ecac6d96cafc64a5b1a377e11",
+  "radio8": "9783f5cf982a020ca7538503f6f6b1468b4357c131e44da3e73a355971deb05c",
+  "radio9": "e6ea9e97d2f42cfc52627261c459a43d3e65bbd2cf46b69c457e9fff950cebc3",
+  "radio10": "7fd523c1b1b7967504f050c59cf8f8680f6c50a36b8459fcab07076c483e709f",
+  "radio11": "36ef2ab3c11de5344d6b3d27121a6c97f0a35e749d5f0f8c05572ffd09addc44",
+  "radio12": "ed799237b8f8f605d8ca3e34511dca4e8d3f1ea373f4da79fee36d42117eb8a4",
+  "radio13": "4e5ea4bff4483c63940e64fa4701b1a45835de0a29edccc15ba361d1d8479a3f",
+  "radio14": "65635052c65aa5b62d5c3702d61b996092dd494080ccb7eb1ac7b2724360ead8",
+  "radio15": "b2d44e8f0b0ee69c0cf28c09b7373ac25a5bbc87669cbf39df280fc7a772d2eb",
+  "radio16": "8fe12549910ce4ba58ca42887eb66b0dfac8f84f015a612bcb40dab40e8212d5",
+  "radio17": "7e2803ea9faabf30a59186de61615f12f0a3ccb1063eca28c15ce34abad01686",
+  "radio18": "ef0996768795e7b07e5d6b138a82f775f660611969b23224aae31e9ee5139124",
+  "radio19": "24982473dcf73e044d6a38921363726f2e9d7fa937c76bb2d6b65032966b43cb",
+  "radio20": "68f45fcd9af14b0ac5295a45a9e02a3578f05ccd4ea8973ea1b05cb5cf4b55d9",
+  "radio21": "3a4edceb476471b00ba645b79338ed5807d958452a930009dba5e93956b79fba",
+  "radio22": "ce5d055731435ebaa1205c2ddb67bdc4962aabf050e86cce2a9d0e4ae0455b5e",
+  "radio23": "b4dcf9a90e31634fcde2109c6101557db11b9f62ef061149d6d81db55e69eda9",
+  "radio24": "ffa283c2495ea93cb861f5ae830abc26f45a907be2268cabd6ab62bf1b5ebf92",
+  "radio25": "64324bb40b8377172a513318ba61ac63686cc711e924ded5850b270931bf748a",
+  "radio26": "962ec60f3349990eb5bbdc0548d840bd3370907e894bbc076913e26b48d54d76",
+  "radio27": "5ab6f79d21174db658edb9532de02f2b0fd2ceb807bf97485a6e08002301d48a",
+  "radio28": "dbf993501c185e01ee44221ee8f2987106506f07610cc8afd0650918de6b4e9c",
+  "radio29": "29f21432f4cc5e15429d40c12b5a351ab48eca723ddb7d056029aebc8adc6206",
+  "radio30": "cd2b0b98a8b8c56ebc863be7ec5a92aed3ef2848b19780791234e09cba2bccd0"
+};
+
+const ARCHIVOS = {
+  lunes: [
+    {id:"lunes_b1", nombre:"Lunes - Bloque 1", url:"https://www.dropbox.com/scl/fi/c8ugo86ar9zbbycaj58ma/lunes_b1.mp3?rlkey=mat4u9n7u37818qib0ne8ajc5&st=9fwfa8pv&dl=1"},
+    {id:"lunes_b2", nombre:"Lunes - Bloque 2", url:"https://www.dropbox.com/scl/fi/xiwhfjxsda18lrjpev1xd/lunes_b2.mp3?rlkey=l3w1fvxv2oauisjlkolvm0102&st=9mhts7a3&dl=1"}
+  ],
+  martes: [
+    {id:"martes_b1", nombre:"Martes - Bloque 1", url:"https://www.dropbox.com/scl/fi/sxewf3xfe8vkey8pq8brl/martes_b1.mp3?rlkey=8nrqrjwtu2k1gzu21o4i41kgb&st=liws8all&dl=1"},
+    {id:"martes_b2", nombre:"Martes - Bloque 2", url:"https://www.dropbox.com/scl/fi/ydh22x3wfta2izae1sfub/martes_b2.mp3?rlkey=dk1opnqmpe9id9mmxbznntokm&st=cv88ul9n&dl=1"}
+  ],
+  miercoles: [
+    {id:"miercoles_b1", nombre:"Miércoles - Bloque 1", url:"https://www.dropbox.com/scl/fi/14dq3yjjpjj3l8zjliy9a/miercoles_b1.mp3?rlkey=4ignvhat9pmrpsamq882yhr4r&st=tu6m26u1&dl=1"},
+    {id:"miercoles_b2", nombre:"Miércoles - Bloque 2", url:"https://www.dropbox.com/scl/fi/0lfrktdp6qgzl8e311mur/miercoles_b2.mp3?rlkey=bmtn9rfw4uh1x93fjz9yh70wd&st=4i0w0p5e&dl=1"}
+  ],
+  jueves: [
+    {id:"jueves_b1", nombre:"Jueves - Bloque 1", url:"https://www.dropbox.com/scl/fi/lk1403a1ysudzrtvjjjiw/jueves_b1.mp3?rlkey=kz74zqfvnpjzqme3z449g88y9&st=1ypr7fwm&dl=1"},
+    {id:"jueves_b2", nombre:"Jueves - Bloque 2", url:"https://www.dropbox.com/scl/fi/ws6nxlnjjru3j5f073h9o/jueves_b2.mp3?rlkey=pc2imdk8g1ow359wzky35dho2&st=a5f6y9nr&dl=1"}
+  ],
+  viernes: [
+    {id:"viernes_b1", nombre:"Viernes - Bloque 1", url:"https://www.dropbox.com/scl/fi/u7ocmrvd7s7t2crdr1is7/viernes_b1.mp3?rlkey=60m7m1cr8sverzvdg5obtfg5o&st=cloimxke&dl=1"},
+    {id:"viernes_b2", nombre:"Viernes - Bloque 2", url:"https://www.dropbox.com/scl/fi/3ezew01848k596yf0song/viernes_b2.mp3?rlkey=9nfxqs7jw35re2tgogwannbv5&st=fg3d9mn6&dl=1"}
+  ]
+};
+
+let usuarioActual = "", diaActual = "";
+// Misma idea que con USUARIOS_HASH: se guarda la huella de la clave
+// admin, no la clave en sí.
+const CLAVE_ADMIN_HASH = "d7a1c0b3ea90ec01005947302a216ffffb9bcc819b60115f813b3572a678b849";
+
+// Calcula la huella SHA-256 de un texto, con lo que el navegador ya
+// trae incorporado (no hace falta ninguna librería externa para esto).
+async function calcularHash(texto) {
+  const datos = new TextEncoder().encode(texto);
+  const buffer = await crypto.subtle.digest("SHA-256", datos);
+  return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function obtenerSemana() {
+  const hoy = new Date();
+  const copia = new Date(hoy);
+  const diaSemana = copia.getDay();
+  copia.setDate(copia.getDate() - diaSemana);
+  return copia.toISOString().slice(0, 10);
+}
+function yaDescargado(id) { const sem = obtenerSemana(); return localStorage.getItem(`desc_${usuarioActual}_${id}_${sem}`) === "1"; }
+function marcarDescargado(id) { const sem = obtenerSemana(); localStorage.setItem(`desc_${usuarioActual}_${id}_${sem}`, "1"); }
+function reiniciarBloque(id) { const sem = obtenerSemana(); localStorage.removeItem(`desc_${usuarioActual}_${id}_${sem}`); }
+function actualizarVistaBloques() {
+  const cont = document.getElementById("contenedorBloques"); cont.innerHTML = "";
+  if(!diaActual || !ARCHIVOS[diaActual]) return;
+  for(const b of ARCHIVOS[diaActual]) {
+    const btn = document.createElement("button"); btn.className = "boton-bloque";
+    if(yaDescargado(b.id)) {
+      btn.textContent = `✅ ${b.nombre} - Ya descargado`;
+      btn.onclick = async () => {
+        const clave = prompt("Clave admin:");
+        if (clave && (await calcularHash(clave)) === CLAVE_ADMIN_HASH) { reiniciarBloque(b.id); actualizarVistaBloques(); }
+      };
+    } else {
+      btn.textContent = `⬇️ Descargar ${b.nombre}`;
+      btn.onclick = () => { marcarDescargado(b.id); Object.assign(document.createElement("a"), {href:b.url, download:`${b.nombre}.mp3`, target:"_blank"}).click(); actualizarVistaBloques(); };
+    }
+    cont.appendChild(btn);
+  }
+}
+function cambiarDia(dia, boton) {
+  diaActual = dia; document.querySelectorAll(".btn-dia").forEach(b=>b.classList.remove("activo")); boton.classList.add("activo"); actualizarVistaBloques();
+}
+function mostrarSeccion(id) { const e = document.getElementById(id); e.style.display = e.style.display === "block" ? "none" : "block"; }
+async function verificarAcceso() {
+  const u = document.getElementById("usuario").value.trim(), p = document.getElementById("clave").value.trim();
+  const err = document.getElementById("mensajeError");
+  const huellaEscrita = await calcularHash(p);
+  if(!USUARIOS_HASH[u] || USUARIOS_HASH[u] !== huellaEscrita) return err.textContent = "❌ Usuario o clave incorrectos";
+  usuarioActual = u; err.textContent = ""; document.getElementById("zonaDescarga").style.display = "block"; actualizarVistaBloques();
+}
+function compartirApp() {
+  const url = "https://radio.lagota.online/";
+  navigator.share ? navigator.share({title:"Radio La Gota 107.5 FM", text:"Escuchá La Gota en vivo", url:url}) : alert("Compartí: " + url);
+}
+</script>
+
+</body>
+</html>
