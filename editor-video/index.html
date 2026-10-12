@@ -28,9 +28,10 @@
   .btn-main{background:#0b3d1f;color:var(--green);}
   .btn-main:disabled{opacity:0.5;}
   .btn-secundario{background:#273145;color:var(--text);}
+  .btn-chico{padding:10px;font-size:0.9rem;}
   .fila{display:flex;gap:10px;}
   .fila .btn{flex:1;}
-  input[type=text], input[type=file], select{
+  input[type=text], input[type=number], input[type=file], select{
     width:100%;padding:12px;border-radius:8px;border:1px solid #333a47;
     background:var(--panel);color:var(--text);font-size:1rem;}
   label{display:block;color:var(--text);margin-bottom:6px;font-size:0.95rem;}
@@ -49,73 +50,116 @@
   a.descarga{color:var(--cyan);display:block;text-align:center;margin-top:10px;
     text-decoration:none;font-weight:600;}
   hr{border:none;border-top:1px solid #272b35;margin:28px 0;}
+  .lista-fotos{list-style:none;margin:0 0 10px;padding:0;border-radius:8px;overflow:hidden;}
+  .lista-fotos li{display:flex;align-items:center;gap:8px;background:var(--panel);
+    padding:8px 10px;margin-bottom:4px;border-radius:8px;font-size:0.9rem;}
+  .lista-fotos li span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .lista-fotos button{background:#273145;color:var(--text);border:none;border-radius:6px;
+    padding:6px 10px;font-size:0.95rem;cursor:pointer;}
+  .lista-fotos button.quitar{background:#3d1414;color:#ff8f7d;}
 </style>
 </head>
 <body>
 
 <h1>Editor de Video</h1>
-<p class="sub">Para cortar un video y ponerle una marca de agua antes de subirlo a redes sociales.</p>
+<p class="sub">Para preparar algo rápido antes de subirlo a redes sociales.</p>
 
 <div class="aviso">
   Esta app hace el trabajo adentro del propio celular, así que en un celular
-  más modesto puede tardar un poco (más o menos lo mismo que dura el video).
-  Si se traba o tarda demasiado: probá con un video más corto, o elegí
-  tamaño "Chico" abajo.
+  más modesto puede tardar un poco. Si se traba o tarda demasiado: probá con
+  menos contenido (un video más corto, o menos fotos), o elegí un tamaño más chico.
 </div>
 
-<div id="paso-elegir">
-  <label for="input-video">1. Elegí el video</label>
-  <input type="file" id="input-video" accept="video/*">
+<div class="radios">
+  <label><input type="radio" name="modo" value="editar" checked> Editar un video existente</label>
+  <label><input type="radio" name="modo" value="fotos"> Crear video desde fotos</label>
 </div>
 
-<div id="seccion-video" class="oculto">
-  <video id="video" playsinline controls></video>
-
-  <h2>2. Recortar (opcional)</h2>
-  <div class="fila">
-    <button class="btn btn-secundario" id="btn-marcar-inicio">Marcar aquí como INICIO</button>
-    <button class="btn btn-secundario" id="btn-marcar-fin">Marcar aquí como FIN</button>
+<!-- =================== MODO: EDITAR UN VIDEO =================== -->
+<div id="modo-editar">
+  <div id="paso-elegir">
+    <label for="input-video">1. Elegí el video</label>
+    <input type="file" id="input-video" accept="video/*">
   </div>
+
+  <div id="seccion-video" class="oculto">
+    <video id="video" playsinline controls></video>
+
+    <h2>2. Recortar (opcional)</h2>
+    <div class="fila">
+      <button class="btn btn-secundario" id="btn-marcar-inicio">Marcar aquí como INICIO</button>
+      <button class="btn btn-secundario" id="btn-marcar-fin">Marcar aquí como FIN</button>
+    </div>
+    <div class="marcas-info">
+      Mirá el video con los controles de arriba, pausalo donde quieras, y
+      apretá el botón correspondiente. Desde: <b id="txt-desde">0:00</b> ·
+      Hasta: <b id="txt-hasta">0:00</b>
+      <br><a href="#" id="link-todo" style="color:var(--cyan)">Usar el video completo</a>
+    </div>
+
+    <h2>3. Girar (opcional)</h2>
+    <div class="campo">
+      <select id="select-girar">
+        <option value="0">No girar</option>
+        <option value="90">90°</option>
+        <option value="180">180°</option>
+        <option value="270">270°</option>
+      </select>
+    </div>
+
+    <h2>4. Tamaño de salida</h2>
+    <div class="campo">
+      <select id="select-tamano">
+        <option value="original">Original</option>
+        <option value="720" selected>Mediano (720p) -recomendado</option>
+        <option value="480">Chico (480p) -más rápido y liviano</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- =================== MODO: CREAR DESDE FOTOS =================== -->
+<div id="modo-fotos" class="oculto">
+  <label for="input-fotos">1. Elegí las fotos (podés elegir varias juntas; el orden de la lista es el orden del video)</label>
+  <input type="file" id="input-fotos" accept="image/*" multiple>
+  <ul class="lista-fotos" id="lista-fotos"></ul>
+
+  <div class="campo">
+    <label for="input-duracion-foto">Segundos por foto</label>
+    <input type="number" id="input-duracion-foto" value="3" min="0.5" step="0.5">
+  </div>
+
+  <h2>2. Forma del video</h2>
+  <div class="campo">
+    <select id="select-orientacion">
+      <option value="vertical" selected>Vertical -reels/stories (720x1280)</option>
+      <option value="horizontal">Horizontal (1280x720)</option>
+      <option value="cuadrado">Cuadrado (1080x1080)</option>
+    </select>
+  </div>
+
+  <h2>3. Música de fondo (opcional)</h2>
+  <input type="file" id="input-musica" accept="audio/*">
   <div class="marcas-info">
-    Mirá el video con los controles de arriba, pausalo donde quieras, y
-    apretá el botón correspondiente. Desde: <b id="txt-desde">0:00</b> ·
-    Hasta: <b id="txt-hasta">0:00</b>
-    <br><a href="#" id="link-todo" style="color:var(--cyan)">Usar el video completo</a>
+    Si la música dura menos que el video, el video sigue sin sonido al final.
   </div>
-
-  <h2>3. Marca de agua (opcional)</h2>
-  <div class="radios">
-    <label><input type="radio" name="marca" value="ninguna" checked> Ninguna</label>
-    <label><input type="radio" name="marca" value="texto"> Texto</label>
-    <label><input type="radio" name="marca" value="imagen"> Imagen / logo</label>
-  </div>
-  <div id="opciones-marca"></div>
-
-  <h2>4. Girar (opcional)</h2>
-  <div class="campo">
-    <select id="select-girar">
-      <option value="0">No girar</option>
-      <option value="90">90°</option>
-      <option value="180">180°</option>
-      <option value="270">270°</option>
-    </select>
-  </div>
-
-  <h2>5. Tamaño de salida</h2>
-  <div class="campo">
-    <select id="select-tamano">
-      <option value="original">Original</option>
-      <option value="720" selected>Mediano (720p) -recomendado</option>
-      <option value="480">Chico (480p) -más rápido y liviano</option>
-    </select>
-  </div>
-
-  <h2>6. Generar</h2>
-  <button class="btn btn-main" id="btn-generar">▶  Generar video</button>
-  <progress id="progreso" value="0" max="100"></progress>
-  <div id="estado"></div>
-  <div id="caja-error"></div>
 </div>
+
+<!-- =================== MARCA DE AGUA (compartida) =================== -->
+<h2>Marca de agua (opcional)</h2>
+<div class="radios">
+  <label><input type="radio" name="marca" value="ninguna" checked> Ninguna</label>
+  <label><input type="radio" name="marca" value="texto"> Texto</label>
+  <label><input type="radio" name="marca" value="imagen"> Imagen / logo</label>
+</div>
+<div id="opciones-marca"></div>
+
+<!-- =================== GENERAR (compartido) =================== -->
+<h2>Generar</h2>
+<button class="btn btn-main" id="btn-generar">▶  Generar video</button>
+<progress id="progreso" value="0" max="100"></progress>
+<div id="estado"></div>
+<div id="caja-error"></div>
 
 <div id="seccion-resultado" class="oculto">
   <hr>
@@ -135,14 +179,26 @@
     });
   }
 
+  // ---------- elementos ----------
+  var modoEditarDiv = document.getElementById("modo-editar");
+  var modoFotosDiv = document.getElementById("modo-fotos");
+  var modoActual = "editar";
+
   var video = document.getElementById("video");
   var inputVideo = document.getElementById("input-video");
   var seccionVideo = document.getElementById("seccion-video");
   var txtDesde = document.getElementById("txt-desde");
   var txtHasta = document.getElementById("txt-hasta");
-  var opcionesMarca = document.getElementById("opciones-marca");
   var selectGirar = document.getElementById("select-girar");
   var selectTamano = document.getElementById("select-tamano");
+
+  var inputFotos = document.getElementById("input-fotos");
+  var listaFotosEl = document.getElementById("lista-fotos");
+  var inputDuracionFoto = document.getElementById("input-duracion-foto");
+  var selectOrientacion = document.getElementById("select-orientacion");
+  var inputMusica = document.getElementById("input-musica");
+
+  var opcionesMarca = document.getElementById("opciones-marca");
   var btnGenerar = document.getElementById("btn-generar");
   var progreso = document.getElementById("progreso");
   var estado = document.getElementById("estado");
@@ -158,6 +214,8 @@
   var generando = false;
   var archivoResultado = null;
   var rafId = null;
+  var fotosArchivos = [];
+  var musicaArchivo = null;
 
   function formatear(seg) {
     seg = Math.max(0, Math.round(seg));
@@ -165,7 +223,21 @@
     return m + ":" + (s < 10 ? "0" : "") + s;
   }
 
-  function actualizarMarcas() {
+  function esperar(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  // ---------- modo ----------
+  var radiosModo = document.getElementsByName("modo");
+  for (var im = 0; im < radiosModo.length; im++) {
+    radiosModo[im].addEventListener("change", function (e) {
+      modoActual = e.target.value;
+      modoEditarDiv.classList.toggle("oculto", modoActual !== "editar");
+      modoFotosDiv.classList.toggle("oculto", modoActual !== "fotos");
+      cajaError.innerHTML = "";
+    });
+  }
+
+  // ---------- modo: editar un video ----------
+  function actualizarMarcasTiempo() {
     txtDesde.textContent = formatear(startTime);
     txtHasta.textContent = formatear(endTime);
   }
@@ -182,26 +254,75 @@
       duracionTotal = video.duration;
       startTime = 0;
       endTime = duracionTotal;
-      actualizarMarcas();
+      actualizarMarcasTiempo();
     };
   });
 
   document.getElementById("btn-marcar-inicio").addEventListener("click", function () {
     startTime = video.currentTime;
     if (endTime <= startTime) endTime = duracionTotal;
-    actualizarMarcas();
+    actualizarMarcasTiempo();
   });
   document.getElementById("btn-marcar-fin").addEventListener("click", function () {
     endTime = video.currentTime;
-    actualizarMarcas();
+    actualizarMarcasTiempo();
   });
   document.getElementById("link-todo").addEventListener("click", function (e) {
     e.preventDefault();
     startTime = 0;
     endTime = duracionTotal;
-    actualizarMarcas();
+    actualizarMarcasTiempo();
   });
 
+  // ---------- modo: crear desde fotos ----------
+  inputFotos.addEventListener("change", function () {
+    for (var i = 0; i < inputFotos.files.length; i++) fotosArchivos.push(inputFotos.files[i]);
+    inputFotos.value = "";
+    refrescarListaFotos();
+  });
+
+  inputMusica.addEventListener("change", function () {
+    musicaArchivo = inputMusica.files[0] || null;
+  });
+
+  function refrescarListaFotos() {
+    listaFotosEl.innerHTML = "";
+    fotosArchivos.forEach(function (archivo, i) {
+      var li = document.createElement("li");
+      var span = document.createElement("span");
+      span.textContent = (i + 1) + ". " + archivo.name;
+      li.appendChild(span);
+
+      var btnSubir = document.createElement("button");
+      btnSubir.textContent = "▲";
+      btnSubir.addEventListener("click", function () { moverFoto(i, -1); });
+      li.appendChild(btnSubir);
+
+      var btnBajar = document.createElement("button");
+      btnBajar.textContent = "▼";
+      btnBajar.addEventListener("click", function () { moverFoto(i, 1); });
+      li.appendChild(btnBajar);
+
+      var btnQuitar = document.createElement("button");
+      btnQuitar.textContent = "✕";
+      btnQuitar.className = "quitar";
+      btnQuitar.addEventListener("click", function () { fotosArchivos.splice(i, 1); refrescarListaFotos(); });
+      li.appendChild(btnQuitar);
+
+      listaFotosEl.appendChild(li);
+    });
+  }
+
+  function moverFoto(i, dir) {
+    var j = i + dir;
+    if (j < 0 || j >= fotosArchivos.length) return;
+    var tmp = fotosArchivos[i];
+    fotosArchivos[i] = fotosArchivos[j];
+    fotosArchivos[j] = tmp;
+    refrescarListaFotos();
+  }
+
+  // ---------- marca de agua (compartida) ----------
   var radiosMarca = document.getElementsByName("marca");
   for (var i = 0; i < radiosMarca.length; i++) {
     radiosMarca[i].addEventListener("change", function (e) {
@@ -271,6 +392,35 @@
     });
   }
 
+  function dibujarMarcaEn(ctx, outW, outH, imgMarca) {
+    if (tipoMarca === "ninguna") return;
+    var margen = Math.round(outW * 0.035);
+    if (tipoMarca === "texto" && textoMarca) {
+      var tam = Math.max(16, Math.round(outW * 0.045));
+      ctx.font = "bold " + tam + "px sans-serif";
+      ctx.textBaseline = "alphabetic";
+      var ancho = ctx.measureText(textoMarca).width;
+      var x, y;
+      if (posicionMarca === "ai") { x = margen; y = margen + tam; }
+      else if (posicionMarca === "ad") { x = outW - margen - ancho; y = margen + tam; }
+      else if (posicionMarca === "bi") { x = margen; y = outH - margen; }
+      else { x = outW - margen - ancho; y = outH - margen; }
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      ctx.fillRect(x - 10, y - tam - 6, ancho + 20, tam + 16);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(textoMarca, x, y);
+    } else if (tipoMarca === "imagen" && imgMarca) {
+      var anchoImg = Math.round(outW * 0.28);
+      var altoImg = anchoImg * (imgMarca.height / imgMarca.width);
+      var ix, iy;
+      if (posicionMarca === "ai") { ix = margen; iy = margen; }
+      else if (posicionMarca === "ad") { ix = outW - margen - anchoImg; iy = margen; }
+      else if (posicionMarca === "bi") { ix = margen; iy = outH - margen - altoImg; }
+      else { ix = outW - margen - anchoImg; iy = outH - margen - altoImg; }
+      ctx.drawImage(imgMarca, ix, iy, anchoImg, altoImg);
+    }
+  }
+
   function elegirMime() {
     if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return "";
     var candidatos = [
@@ -290,15 +440,35 @@
     cajaError.innerHTML = '<div class="error">' + msg + "</div>";
   }
 
+  function validarMarca() {
+    if (tipoMarca === "imagen" && !archivoMarcaImg) {
+      mostrarError('Elegí una imagen para la marca de agua, o elegí "Ninguna".');
+      return false;
+    }
+    return true;
+  }
+
+  // ---------- generar: router por modo ----------
   btnGenerar.addEventListener("click", function () {
-    generar().catch(function (e) {
+    var promesa = modoActual === "editar" ? generarDesdeVideo() : generarDesdeFotos();
+    promesa.catch(function (e) {
       mostrarError("No se pudo generar el video: " + (e && e.message ? e.message : e));
       generando = false;
       btnGenerar.disabled = false;
     });
   });
 
-  async function generar() {
+  function iniciarUI() {
+    generando = true;
+    btnGenerar.disabled = true;
+    cajaError.innerHTML = "";
+    seccionResultado.classList.add("oculto");
+    progreso.value = 0;
+    estado.textContent = "Preparando...";
+  }
+
+  // ---------- generar: editar un video existente ----------
+  async function generarDesdeVideo() {
     if (generando) return;
     if (!window.MediaRecorder || !video.captureStream) {
       mostrarError("Este navegador no puede procesar video acá (probá actualizar Chrome).");
@@ -309,17 +479,9 @@
       mostrarError('El "Hasta" tiene que ser mayor que el "Desde".');
       return;
     }
-    if (tipoMarca === "imagen" && !archivoMarcaImg) {
-      mostrarError('Elegí una imagen para la marca de agua, o elegí "Ninguna".');
-      return;
-    }
+    if (!validarMarca()) return;
 
-    generando = true;
-    btnGenerar.disabled = true;
-    cajaError.innerHTML = "";
-    seccionResultado.classList.add("oculto");
-    progreso.value = 0;
-    estado.textContent = "Preparando...";
+    iniciarUI();
 
     var vw = video.videoWidth, vh = video.videoHeight;
     var rot = parseInt(selectGirar.value, 10);
@@ -342,9 +504,7 @@
     var ctx = canvas.getContext("2d");
 
     var imgMarca = null;
-    if (tipoMarca === "imagen") {
-      imgMarca = await cargarImagen(archivoMarcaImg);
-    }
+    if (tipoMarca === "imagen") imgMarca = await cargarImagen(archivoMarcaImg);
 
     var streamOrigen = video.captureStream ? video.captureStream() : video.mozCaptureStream();
     var pistaAudio = streamOrigen.getAudioTracks()[0];
@@ -370,35 +530,6 @@
     grabador.ondataavailable = function (e) { if (e.data && e.data.size) partes.push(e.data); };
 
     var detenido = false;
-    function dibujarMarca() {
-      if (tipoMarca === "ninguna") return;
-      var margen = Math.round(outW * 0.035);
-      if (tipoMarca === "texto" && textoMarca) {
-        var tam = Math.max(16, Math.round(outW * 0.045));
-        ctx.font = "bold " + tam + "px sans-serif";
-        ctx.textBaseline = "alphabetic";
-        var ancho = ctx.measureText(textoMarca).width;
-        var x, y;
-        if (posicionMarca === "ai") { x = margen; y = margen + tam; }
-        else if (posicionMarca === "ad") { x = outW - margen - ancho; y = margen + tam; }
-        else if (posicionMarca === "bi") { x = margen; y = outH - margen; }
-        else { x = outW - margen - ancho; y = outH - margen; }
-        ctx.fillStyle = "rgba(0,0,0,0.45)";
-        ctx.fillRect(x - 10, y - tam - 6, ancho + 20, tam + 16);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(textoMarca, x, y);
-      } else if (tipoMarca === "imagen" && imgMarca) {
-        var anchoImg = Math.round(outW * 0.28);
-        var altoImg = anchoImg * (imgMarca.height / imgMarca.width);
-        var ix, iy;
-        if (posicionMarca === "ai") { ix = margen; iy = margen; }
-        else if (posicionMarca === "ad") { ix = outW - margen - anchoImg; iy = margen; }
-        else if (posicionMarca === "bi") { ix = margen; iy = outH - margen - altoImg; }
-        else { ix = outW - margen - anchoImg; iy = outH - margen - altoImg; }
-        ctx.drawImage(imgMarca, ix, iy, anchoImg, altoImg);
-      }
-    }
-
     function dibujarFrame() {
       ctx.save();
       ctx.translate(outW / 2, outH / 2);
@@ -408,7 +539,7 @@
       var drawH = swap ? outW : outH;
       ctx.drawImage(video, -drawW / 2, -drawH / 2, drawW, drawH);
       ctx.restore();
-      dibujarMarca();
+      dibujarMarcaEn(ctx, outW, outH, imgMarca);
       rafId = requestAnimationFrame(dibujarFrame);
     }
 
@@ -448,6 +579,114 @@
     video.addEventListener("timeupdate", onTimeUpdate);
     await video.play();
     rafId = requestAnimationFrame(dibujarFrame);
+  }
+
+  // ---------- generar: crear video desde fotos ----------
+  async function generarDesdeFotos() {
+    if (generando) return;
+    if (!window.MediaRecorder) {
+      mostrarError("Este navegador no puede procesar video acá (probá actualizar Chrome).");
+      return;
+    }
+    if (fotosArchivos.length < 1) {
+      mostrarError("Agregá por lo menos una foto.");
+      return;
+    }
+    var duracionFoto = parseFloat(inputDuracionFoto.value);
+    if (!duracionFoto || duracionFoto <= 0) {
+      mostrarError('Los "Segundos por foto" tienen que ser un número mayor que 0.');
+      return;
+    }
+    if (!validarMarca()) return;
+
+    iniciarUI();
+
+    var tamanos = {
+      vertical: [720, 1280],
+      horizontal: [1280, 720],
+      cuadrado: [1080, 1080]
+    };
+    var tam = tamanos[selectOrientacion.value] || tamanos.vertical;
+    var outW = tam[0], outH = tam[1];
+
+    var canvas = document.createElement("canvas");
+    canvas.width = outW; canvas.height = outH;
+    var ctx = canvas.getContext("2d");
+
+    var imgMarca = null;
+    if (tipoMarca === "imagen") imgMarca = await cargarImagen(archivoMarcaImg);
+
+    var imagenesCargadas = [];
+    for (var i = 0; i < fotosArchivos.length; i++) {
+      imagenesCargadas.push(await cargarImagen(fotosArchivos[i]));
+    }
+
+    var audioEl = null;
+    var pistaAudio = null;
+    if (musicaArchivo) {
+      audioEl = new Audio();
+      audioEl.src = URL.createObjectURL(musicaArchivo);
+      await new Promise(function (resolve) {
+        audioEl.oncanplaythrough = resolve;
+        audioEl.onerror = resolve;
+        audioEl.load();
+      });
+      var streamAudio = audioEl.captureStream ? audioEl.captureStream() : audioEl.mozCaptureStream();
+      pistaAudio = streamAudio.getAudioTracks()[0];
+    }
+
+    var streamCanvas = canvas.captureStream ? canvas.captureStream(30) : canvas.mozCaptureStream(30);
+    var streamFinal = new MediaStream();
+    streamFinal.addTrack(streamCanvas.getVideoTracks()[0]);
+    if (pistaAudio) streamFinal.addTrack(pistaAudio);
+
+    var tipoMime = elegirMime();
+    var grabador;
+    try {
+      grabador = tipoMime
+        ? new MediaRecorder(streamFinal, { mimeType: tipoMime, videoBitsPerSecond: 3000000 })
+        : new MediaRecorder(streamFinal);
+    } catch (e) {
+      generando = false; btnGenerar.disabled = false;
+      mostrarError("No se pudo iniciar la grabación: " + e.message);
+      return;
+    }
+
+    var partes = [];
+    grabador.ondataavailable = function (e) { if (e.data && e.data.size) partes.push(e.data); };
+
+    grabador.onstop = function () {
+      if (audioEl) audioEl.pause();
+      var blob = new Blob(partes, { type: tipoMime || "video/webm" });
+      mostrarResultado(blob);
+      generando = false;
+      btnGenerar.disabled = false;
+    };
+
+    function dibujarFoto(img) {
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, outW, outH);
+      var escala = Math.min(outW / img.width, outH / img.height);
+      var w = img.width * escala, h = img.height * escala;
+      var x = (outW - w) / 2, y = (outH - h) / 2;
+      ctx.drawImage(img, x, y, w, h);
+      dibujarMarcaEn(ctx, outW, outH, imgMarca);
+    }
+
+    var duracionTotalSeg = duracionFoto * imagenesCargadas.length;
+    grabador.start();
+    if (audioEl) { try { await audioEl.play(); } catch (e) { /* no pasa nada si no se puede */ } }
+
+    for (var idx = 0; idx < imagenesCargadas.length; idx++) {
+      dibujarFoto(imagenesCargadas[idx]);
+      var hecho = idx * duracionFoto;
+      progreso.value = Math.min(100, Math.round((hecho / duracionTotalSeg) * 100));
+      estado.textContent = "Generando... foto " + (idx + 1) + " de " + imagenesCargadas.length;
+      await esperar(duracionFoto * 1000);
+    }
+    progreso.value = 100;
+    estado.textContent = "Terminando...";
+    grabador.stop();
   }
 
   function mostrarResultado(blob) {

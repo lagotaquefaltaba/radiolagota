@@ -1,6 +1,6 @@
 // Service worker: deja usar la app sin internet después de la primera vez
 // que se abre (los archivos quedan guardados en el celular).
-const CACHE = "editor-video-v1";
+const CACHE = "editor-video-v2";
 const ARCHIVOS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
