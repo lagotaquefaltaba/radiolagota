@@ -64,6 +64,11 @@
 <h1>Editor de Video</h1>
 <p class="sub">Para preparar algo rápido antes de subirlo a redes sociales.</p>
 
+<button class="btn btn-secundario" id="btn-instalar" style="display:none;margin-bottom:16px;">📲 Instalar esta app</button>
+<p class="marcas-info oculto" id="nota-instalar-manual" style="margin-top:-10px;">
+  Si no ves el botón de instalar: tocá los 3 puntitos de arriba a la derecha del navegador → "Agregar a pantalla de inicio".
+</p>
+
 <div class="aviso">
   Esta app hace el trabajo adentro del propio celular, así que en un celular
   más modesto puede tardar un poco. Si se traba o tarda demasiado: probá con
@@ -178,6 +183,49 @@
       navigator.serviceWorker.register("sw.js").catch(function () {});
     });
   }
+
+  // ---------- botón "Instalar esta app" ----------
+  (function () {
+    var btnInstalar = document.getElementById("btn-instalar");
+    var notaManual = document.getElementById("nota-instalar-manual");
+    var eventoInstalar = null;
+
+    function yaInstalada() {
+      return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    }
+
+    if (yaInstalada()) return; // ya la tiene instalada, no hace falta nada
+
+    window.addEventListener("beforeinstallprompt", function (e) {
+      e.preventDefault();
+      eventoInstalar = e;
+      btnInstalar.style.display = "block";
+    });
+
+    window.addEventListener("appinstalled", function () {
+      eventoInstalar = null;
+      btnInstalar.style.display = "none";
+      notaManual.classList.add("oculto");
+    });
+
+    btnInstalar.addEventListener("click", function () {
+      if (!eventoInstalar) return;
+      eventoInstalar.prompt();
+      eventoInstalar.userChoice.then(function () {
+        eventoInstalar = null;
+      });
+    });
+
+    // Si a los pocos segundos el navegador no ofreció instalar solo (pasa
+    // en algunos Android, o si ya se descartó el cartel antes), mostramos
+    // el paso manual de todas formas -así nunca se queda sin ninguna
+    // forma de instalarla.
+    setTimeout(function () {
+      if (!eventoInstalar && !yaInstalada()) {
+        notaManual.classList.remove("oculto");
+      }
+    }, 2500);
+  })();
 
   // ---------- elementos ----------
   var modoEditarDiv = document.getElementById("modo-editar");
