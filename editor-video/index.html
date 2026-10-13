@@ -166,6 +166,20 @@
   <div class="marcas-info">
     Si la música dura menos que el video, el video sigue sin sonido al final.
   </div>
+
+  <div class="campo oculto" id="caja-preview-musica">
+    <label>Escuchar y elegir desde dónde arranca</label>
+    <audio id="preview-musica" controls style="width:100%;"></audio>
+    <div class="marcas-info" style="margin-bottom:8px;">
+      Movete con la barra de arriba hasta el punto que quieras, después tocá
+      "Usar este momento como inicio". El video va a usar la música a partir
+      de ahí. Arranca en: <b id="txt-musica-inicio">0:00</b> (el principio)
+    </div>
+    <div class="fila">
+      <button type="button" class="btn btn-secundario btn-chico" id="btn-usar-inicio-musica">Usar este momento como inicio</button>
+      <button type="button" class="btn btn-secundario btn-chico" id="btn-resetear-inicio-musica">Volver al principio</button>
+    </div>
+  </div>
 </div>
 
 <!-- =================== MARCA DE AGUA (compartida) =================== -->
@@ -295,6 +309,7 @@
   var rafId = null;
   var fotosArchivos = [];
   var musicaArchivo = null;
+  var musicaInicio = 0;
 
   function formatear(seg) {
     seg = Math.max(0, Math.round(seg));
@@ -362,6 +377,16 @@
 
   var EXTENSIONES_AUDIO = [".mp3", ".wav", ".m4a", ".aac", ".ogg", ".oga", ".flac", ".opus", ".wma", ".3gp", ".amr"];
 
+  var cajaPreviewMusica = document.getElementById("caja-preview-musica");
+  var previewMusica = document.getElementById("preview-musica");
+  var txtMusicaInicio = document.getElementById("txt-musica-inicio");
+  var btnUsarInicioMusica = document.getElementById("btn-usar-inicio-musica");
+  var btnResetearInicioMusica = document.getElementById("btn-resetear-inicio-musica");
+
+  function actualizarTxtMusicaInicio() {
+    txtMusicaInicio.textContent = musicaInicio > 0 ? formatear(musicaInicio) : "0:00 (el principio)";
+  }
+
   inputMusica.addEventListener("change", function () {
     var archivo = inputMusica.files[0] || null;
     if (archivo) {
@@ -380,11 +405,32 @@
         if (!seguro) {
           inputMusica.value = "";
           musicaArchivo = null;
+          cajaPreviewMusica.classList.add("oculto");
           return;
         }
       }
     }
     musicaArchivo = archivo;
+    musicaInicio = 0;
+    actualizarTxtMusicaInicio();
+    if (archivo) {
+      previewMusica.src = URL.createObjectURL(archivo);
+      cajaPreviewMusica.classList.remove("oculto");
+    } else {
+      previewMusica.removeAttribute("src");
+      cajaPreviewMusica.classList.add("oculto");
+    }
+  });
+
+  btnUsarInicioMusica.addEventListener("click", function () {
+    musicaInicio = previewMusica.currentTime || 0;
+    actualizarTxtMusicaInicio();
+  });
+
+  btnResetearInicioMusica.addEventListener("click", function () {
+    musicaInicio = 0;
+    previewMusica.currentTime = 0;
+    actualizarTxtMusicaInicio();
   });
 
   function refrescarListaFotos() {
@@ -765,6 +811,9 @@
         audioEl.onerror = resolve;
         audioEl.load();
       });
+      if (musicaInicio > 0 && isFinite(audioEl.duration)) {
+        audioEl.currentTime = Math.min(musicaInicio, Math.max(0, audioEl.duration - 0.1));
+      }
       var streamAudio = audioEl.captureStream ? audioEl.captureStream() : audioEl.mozCaptureStream();
       pistaAudio = streamAudio.getAudioTracks()[0];
     }
@@ -772,7 +821,7 @@
     // ---------- armar la secuencia: qué foto va cuándo y cuánto dura ----------
     var secuencia;
     if (modoDurFoto === "repetir") {
-      var duracionMusica = audioEl && isFinite(audioEl.duration) ? audioEl.duration : 0;
+      var duracionMusica = audioEl && isFinite(audioEl.duration) ? Math.max(0, audioEl.duration - musicaInicio) : 0;
       if (!duracionMusica) {
         generando = false; btnGenerar.disabled = false;
         mostrarError('No se pudo saber cuánto dura esa música -probá con otro archivo, o usá "Fija" en vez de "Repetir".');
