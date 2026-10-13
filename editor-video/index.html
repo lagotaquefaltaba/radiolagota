@@ -148,7 +148,7 @@
   </div>
 
   <h2>3. Música de fondo (opcional)</h2>
-  <input type="file" id="input-musica" accept="audio/*">
+  <input type="file" id="input-musica">
   <div class="marcas-info">
     Si la música dura menos que el video, el video sigue sin sonido al final.
   </div>
@@ -334,8 +334,31 @@
     refrescarListaFotos();
   });
 
+  var EXTENSIONES_AUDIO = [".mp3", ".wav", ".m4a", ".aac", ".ogg", ".oga", ".flac", ".opus", ".wma"];
+
   inputMusica.addEventListener("change", function () {
-    musicaArchivo = inputMusica.files[0] || null;
+    var archivo = inputMusica.files[0] || null;
+    if (archivo) {
+      var esAudioPorTipo = archivo.type.indexOf("audio") === 0;
+      var nombreMin = archivo.name.toLowerCase();
+      var esAudioPorExtension = EXTENSIONES_AUDIO.some(function (ext) { return nombreMin.endsWith(ext); });
+      // En algunos celulares (sobre todo Samsung) el explorador no informa
+      // bien el "tipo" del archivo -por eso, si no se pudo confirmar que es
+      // audio ni por tipo ni por extensión, no lo rechazamos directo: solo
+      // avisamos y dejamos que siga si el usuario confirma que es correcto.
+      if (!esAudioPorTipo && !esAudioPorExtension) {
+        var seguro = confirm(
+          '"' + archivo.name + '" no parece un archivo de audio (mp3, wav, etc). ' +
+          "¿Lo elegiste a propósito igual?"
+        );
+        if (!seguro) {
+          inputMusica.value = "";
+          musicaArchivo = null;
+          return;
+        }
+      }
+    }
+    musicaArchivo = archivo;
   });
 
   function refrescarListaFotos() {
