@@ -134,6 +134,10 @@
     <input type="number" id="input-duracion-foto" value="3" min="0.5" step="0.5">
   </div>
 
+  <div class="campo">
+    <label><input type="checkbox" id="check-transicion" checked style="width:auto;margin-right:8px;vertical-align:middle;"> Transición (fundido suave entre fotos)</label>
+  </div>
+
   <h2>2. Forma del video</h2>
   <div class="campo">
     <select id="select-orientacion">
@@ -243,6 +247,7 @@
   var inputFotos = document.getElementById("input-fotos");
   var listaFotosEl = document.getElementById("lista-fotos");
   var inputDuracionFoto = document.getElementById("input-duracion-foto");
+  var checkTransicion = document.getElementById("check-transicion");
   var selectOrientacion = document.getElementById("select-orientacion");
   var inputMusica = document.getElementById("input-musica");
 
@@ -444,7 +449,7 @@
     if (tipoMarca === "ninguna") return;
     var margen = Math.round(outW * 0.035);
     if (tipoMarca === "texto" && textoMarca) {
-      var tam = Math.max(16, Math.round(outW * 0.045));
+      var tam = Math.max(16, Math.round(outW * 0.054));
       ctx.font = "bold " + tam + "px sans-serif";
       ctx.textBaseline = "alphabetic";
       var ancho = ctx.measureText(textoMarca).width;
@@ -711,13 +716,29 @@
       btnGenerar.disabled = false;
     };
 
-    function dibujarFoto(img) {
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, outW, outH);
+    function dibujarImagenSola(img) {
       var escala = Math.min(outW / img.width, outH / img.height);
       var w = img.width * escala, h = img.height * escala;
       var x = (outW - w) / 2, y = (outH - h) / 2;
       ctx.drawImage(img, x, y, w, h);
+    }
+
+    // Transición: un fundido simple (una foto se desvanece mientras entra
+    // la siguiente) -no es toda la variedad de efectos de la versión PC,
+    // pero es liviano para que ande bien en un celular más modesto.
+    var hayTransicion = checkTransicion.checked && imagenesCargadas.length > 1;
+    var duracionTrans = hayTransicion ? Math.min(0.6, duracionFoto * 0.4) : 0;
+
+    function dibujarCuadro(idx, alphaSiguiente) {
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, outW, outH);
+      dibujarImagenSola(imagenesCargadas[idx]);
+      if (alphaSiguiente > 0 && idx + 1 < imagenesCargadas.length) {
+        ctx.globalAlpha = alphaSiguiente;
+        dibujarImagenSola(imagenesCargadas[idx + 1]);
+        ctx.globalAlpha = 1;
+      }
       dibujarMarcaEn(ctx, outW, outH, imgMarca);
     }
 
@@ -725,14 +746,30 @@
     grabador.start();
     if (audioEl) { try { await audioEl.play(); } catch (e) { /* no pasa nada si no se puede */ } }
 
-    for (var idx = 0; idx < imagenesCargadas.length; idx++) {
-      dibujarFoto(imagenesCargadas[idx]);
-      var hecho = idx * duracionFoto;
-      progreso.value = Math.min(100, Math.round((hecho / duracionTotalSeg) * 100));
-      estado.textContent = "Generando... foto " + (idx + 1) + " de " + imagenesCargadas.length;
-      await esperar(duracionFoto * 1000);
-    }
-    progreso.value = 100;
+    await new Promise(function (resolve) {
+      var inicio = performance.now();
+      function cuadro() {
+        var t = (performance.now() - inicio) / 1000;
+        if (t >= duracionTotalSeg) {
+          dibujarCuadro(imagenesCargadas.length - 1, 0);
+          progreso.value = 100;
+          resolve();
+          return;
+        }
+        var idx = Math.min(imagenesCargadas.length - 1, Math.floor(t / duracionFoto));
+        var tEnFoto = t - idx * duracionFoto;
+        var alphaSiguiente = 0;
+        if (hayTransicion && tEnFoto >= duracionFoto - duracionTrans) {
+          alphaSiguiente = (tEnFoto - (duracionFoto - duracionTrans)) / duracionTrans;
+        }
+        dibujarCuadro(idx, alphaSiguiente);
+        progreso.value = Math.min(100, Math.round((t / duracionTotalSeg) * 100));
+        estado.textContent = "Generando... foto " + (idx + 1) + " de " + imagenesCargadas.length;
+        requestAnimationFrame(cuadro);
+      }
+      requestAnimationFrame(cuadro);
+    });
+
     estado.textContent = "Terminando...";
     grabador.stop();
   }
