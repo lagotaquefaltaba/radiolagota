@@ -162,7 +162,7 @@
   </div>
 
   <h2>3. Música de fondo (opcional)</h2>
-  <input type="file" id="input-musica" accept="*/*">
+  <input type="file" id="input-musica" accept=".mp3,.wav,.ogg,.oga,.m4a,.aac,.flac,.wma,.opus,.3gp,.amr">
   <div class="marcas-info">
     Si la música dura menos que el video, el video sigue sin sonido al final.
   </div>
@@ -360,7 +360,7 @@
     refrescarListaFotos();
   });
 
-  var EXTENSIONES_AUDIO = [".mp3", ".wav", ".m4a", ".aac", ".ogg", ".oga", ".flac", ".opus", ".wma"];
+  var EXTENSIONES_AUDIO = [".mp3", ".wav", ".m4a", ".aac", ".ogg", ".oga", ".flac", ".opus", ".wma", ".3gp", ".amr"];
 
   inputMusica.addEventListener("change", function () {
     var archivo = inputMusica.files[0] || null;
