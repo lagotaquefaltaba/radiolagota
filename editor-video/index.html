@@ -130,8 +130,22 @@
   <ul class="lista-fotos" id="lista-fotos"></ul>
 
   <div class="campo">
+    <label>Duración de cada foto</label>
+    <label><input type="radio" name="modo-dur-foto" value="fija" checked style="width:auto;margin-right:8px;vertical-align:middle;"> Fija -vos elegís cuánto dura cada una</label>
+    <label><input type="radio" name="modo-dur-foto" value="repetir" style="width:auto;margin-right:8px;vertical-align:middle;"> Repetir las fotos hasta completar la música</label>
+  </div>
+
+  <div class="campo" id="campo-duracion-fija">
     <label for="input-duracion-foto">Segundos por foto</label>
     <input type="number" id="input-duracion-foto" value="3" min="0.5" step="0.5">
+  </div>
+
+  <div class="campo oculto" id="campo-tope-foto">
+    <label for="input-tope-foto">Tope de segundos por foto (como mucho)</label>
+    <input type="number" id="input-tope-foto" value="7" min="0.5" step="0.5">
+    <div class="marcas-info">
+      Elegida arriba -el video dura lo mismo que la música completa (o el tramo que elijas), repitiendo las fotos sin que ninguna dure más que esto.
+    </div>
   </div>
 
   <div class="campo">
@@ -148,7 +162,7 @@
   </div>
 
   <h2>3. Música de fondo (opcional)</h2>
-  <input type="file" id="input-musica">
+  <input type="file" id="input-musica" accept="*/*">
   <div class="marcas-info">
     Si la música dura menos que el video, el video sigue sin sonido al final.
   </div>
@@ -246,9 +260,21 @@
 
   var inputFotos = document.getElementById("input-fotos");
   var listaFotosEl = document.getElementById("lista-fotos");
+  var radiosModoDurFoto = document.getElementsByName("modo-dur-foto");
+  var campoDuracionFija = document.getElementById("campo-duracion-fija");
+  var campoTopeFoto = document.getElementById("campo-tope-foto");
   var inputDuracionFoto = document.getElementById("input-duracion-foto");
+  var inputTopeFoto = document.getElementById("input-tope-foto");
   var checkTransicion = document.getElementById("check-transicion");
   var selectOrientacion = document.getElementById("select-orientacion");
+
+  for (var ri = 0; ri < radiosModoDurFoto.length; ri++) {
+    radiosModoDurFoto[ri].addEventListener("change", function () {
+      var repetir = document.querySelector('input[name="modo-dur-foto"]:checked').value === "repetir";
+      campoDuracionFija.classList.toggle("oculto", repetir);
+      campoTopeFoto.classList.toggle("oculto", !repetir);
+    });
+  }
   var inputMusica = document.getElementById("input-musica");
 
   var opcionesMarca = document.getElementById("opciones-marca");
@@ -657,6 +683,24 @@
     rafId = requestAnimationFrame(dibujarFrame);
   }
 
+  // Para el modo "repetir": arma la secuencia completa de fotos repitiendo
+  // el orden una y otra vez hasta llenar toda la duración de la música,
+  // con cada foto durando "tope" segundos -salvo la última, que se recorta
+  // para que el total cierre justo con el final del tema.
+  function calcularSecuenciaRepetida(tramoTotal, tope, fotos) {
+    var secuencia = [];
+    var acumulado = 0;
+    var i = 0;
+    while (acumulado < tramoTotal - 0.01) {
+      var restante = tramoTotal - acumulado;
+      var dur = Math.min(tope, restante);
+      secuencia.push({ img: fotos[i % fotos.length], dur: dur });
+      acumulado += dur;
+      i++;
+    }
+    return secuencia;
+  }
+
   // ---------- generar: crear video desde fotos ----------
   async function generarDesdeFotos() {
     if (generando) return;
@@ -668,10 +712,24 @@
       mostrarError("Agregá por lo menos una foto.");
       return;
     }
-    var duracionFoto = parseFloat(inputDuracionFoto.value);
-    if (!duracionFoto || duracionFoto <= 0) {
-      mostrarError('Los "Segundos por foto" tienen que ser un número mayor que 0.');
-      return;
+    var modoDurFoto = document.querySelector('input[name="modo-dur-foto"]:checked').value;
+    var duracionFoto = null, topeFoto = null;
+    if (modoDurFoto === "repetir") {
+      if (!musicaArchivo) {
+        mostrarError('Para "Repetir las fotos hasta completar la música" elegí una música de fondo arriba.');
+        return;
+      }
+      topeFoto = parseFloat(inputTopeFoto.value);
+      if (!topeFoto || topeFoto <= 0) {
+        mostrarError('El "Tope de segundos por foto" tiene que ser un número mayor que 0.');
+        return;
+      }
+    } else {
+      duracionFoto = parseFloat(inputDuracionFoto.value);
+      if (!duracionFoto || duracionFoto <= 0) {
+        mostrarError('Los "Segundos por foto" tienen que ser un número mayor que 0.');
+        return;
+      }
     }
     if (!validarMarca()) return;
 
@@ -711,6 +769,22 @@
       pistaAudio = streamAudio.getAudioTracks()[0];
     }
 
+    // ---------- armar la secuencia: qué foto va cuándo y cuánto dura ----------
+    var secuencia;
+    if (modoDurFoto === "repetir") {
+      var duracionMusica = audioEl && isFinite(audioEl.duration) ? audioEl.duration : 0;
+      if (!duracionMusica) {
+        generando = false; btnGenerar.disabled = false;
+        mostrarError('No se pudo saber cuánto dura esa música -probá con otro archivo, o usá "Fija" en vez de "Repetir".');
+        return;
+      }
+      secuencia = calcularSecuenciaRepetida(duracionMusica, topeFoto, imagenesCargadas);
+    } else {
+      secuencia = imagenesCargadas.map(function (img) { return { img: img, dur: duracionFoto }; });
+    }
+    var inicios = [0];
+    for (var si = 0; si < secuencia.length; si++) inicios.push(inicios[si] + secuencia[si].dur);
+
     var streamCanvas = canvas.captureStream ? canvas.captureStream(30) : canvas.mozCaptureStream(30);
     var streamFinal = new MediaStream();
     streamFinal.addTrack(streamCanvas.getVideoTracks()[0]);
@@ -749,23 +823,22 @@
     // Transición: un fundido simple (una foto se desvanece mientras entra
     // la siguiente) -no es toda la variedad de efectos de la versión PC,
     // pero es liviano para que ande bien en un celular más modesto.
-    var hayTransicion = checkTransicion.checked && imagenesCargadas.length > 1;
-    var duracionTrans = hayTransicion ? Math.min(0.6, duracionFoto * 0.4) : 0;
+    var hayTransicion = checkTransicion.checked && secuencia.length > 1;
 
     function dibujarCuadro(idx, alphaSiguiente) {
       ctx.globalAlpha = 1;
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, outW, outH);
-      dibujarImagenSola(imagenesCargadas[idx]);
-      if (alphaSiguiente > 0 && idx + 1 < imagenesCargadas.length) {
+      dibujarImagenSola(secuencia[idx].img);
+      if (alphaSiguiente > 0 && idx + 1 < secuencia.length) {
         ctx.globalAlpha = alphaSiguiente;
-        dibujarImagenSola(imagenesCargadas[idx + 1]);
+        dibujarImagenSola(secuencia[idx + 1].img);
         ctx.globalAlpha = 1;
       }
       dibujarMarcaEn(ctx, outW, outH, imgMarca);
     }
 
-    var duracionTotalSeg = duracionFoto * imagenesCargadas.length;
+    var duracionTotalSeg = inicios[inicios.length - 1];
     grabador.start();
     if (audioEl) { try { await audioEl.play(); } catch (e) { /* no pasa nada si no se puede */ } }
 
@@ -774,20 +847,24 @@
       function cuadro() {
         var t = (performance.now() - inicio) / 1000;
         if (t >= duracionTotalSeg) {
-          dibujarCuadro(imagenesCargadas.length - 1, 0);
+          dibujarCuadro(secuencia.length - 1, 0);
           progreso.value = 100;
           resolve();
           return;
         }
-        var idx = Math.min(imagenesCargadas.length - 1, Math.floor(t / duracionFoto));
-        var tEnFoto = t - idx * duracionFoto;
+        // ubicar en qué segmento de la secuencia estamos según el tiempo t
+        var idx = 0;
+        while (idx < secuencia.length - 1 && t >= inicios[idx + 1]) idx++;
+        var durActual = secuencia[idx].dur;
+        var tEnFoto = t - inicios[idx];
+        var duracionTrans = hayTransicion ? Math.min(0.6, durActual * 0.4) : 0;
         var alphaSiguiente = 0;
-        if (hayTransicion && tEnFoto >= duracionFoto - duracionTrans) {
-          alphaSiguiente = (tEnFoto - (duracionFoto - duracionTrans)) / duracionTrans;
+        if (hayTransicion && tEnFoto >= durActual - duracionTrans) {
+          alphaSiguiente = (tEnFoto - (durActual - duracionTrans)) / duracionTrans;
         }
         dibujarCuadro(idx, alphaSiguiente);
         progreso.value = Math.min(100, Math.round((t / duracionTotalSeg) * 100));
-        estado.textContent = "Generando... foto " + (idx + 1) + " de " + imagenesCargadas.length;
+        estado.textContent = "Generando... foto " + (idx + 1) + " de " + secuencia.length;
         requestAnimationFrame(cuadro);
       }
       requestAnimationFrame(cuadro);
