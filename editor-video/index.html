@@ -1076,11 +1076,17 @@
 
     var streamOrigen = video.captureStream ? video.captureStream() : video.mozCaptureStream();
     var pistaAudio = streamOrigen.getAudioTracks()[0];
-    // 15 cuadros por segundo en vez de 30: en un celular modesto, dibujar y
-    // codificar la mitad de cuadros alivia bastante el procesador, y para
-    // un video de redes sociales no se nota.
-    var streamCanvas = canvas.captureStream ? canvas.captureStream(15) : canvas.mozCaptureStream(15);
+    // El cuadro del canvas se captura "a pedido" (0 = sin reloj propio) en
+    // vez de cada 15avo de segundo por su cuenta. Con un reloj propio, el
+    // audio (que sigue el tiempo real sin parar) y el video (que depende de
+    // lo que el celular llegue a dibujar) podían irse desfasando de a
+    // poquito durante toda la grabación -terminaba sonando el audio hasta
+    // el final pero con la imagen atrasada, como si "faltara" un pedazo de
+    // video aunque la duración total coincidiera. Pidiendo el cuadro justo
+    // después de cada dibujo, la imagen queda siempre pegada al sonido.
+    var streamCanvas = canvas.captureStream ? canvas.captureStream(0) : canvas.mozCaptureStream(0);
     var pistaVideoCanvas = streamCanvas.getVideoTracks()[0];
+    var puedePedirCuadro = typeof pistaVideoCanvas.requestFrame === "function";
     var streamFinal = new MediaStream();
     streamFinal.addTrack(pistaVideoCanvas);
     if (pistaAudio) streamFinal.addTrack(pistaAudio);
@@ -1127,6 +1133,7 @@
         ctx.restore();
       }
       dibujarMarcaEn(ctx, outW, outH, imgMarca);
+      if (puedePedirCuadro) pistaVideoCanvas.requestFrame();
 
       var t = video.currentTime;
       var transcurridoReal = (performance.now() - inicioReloj) / 1000;
@@ -1248,9 +1255,13 @@
     if (pistaAudio1) pistaAudio1.enabled = true;
     if (pistaAudio2) pistaAudio2.enabled = false;
 
-    var streamCanvas = canvas.captureStream ? canvas.captureStream(15) : canvas.mozCaptureStream(15);
+    // Igual que en "Editar un video": se captura el cuadro a pedido en vez
+    // de con un reloj propio, para que la imagen no se desfase del audio.
+    var streamCanvas = canvas.captureStream ? canvas.captureStream(0) : canvas.mozCaptureStream(0);
+    var pistaVideoCanvas = streamCanvas.getVideoTracks()[0];
+    var puedePedirCuadro = typeof pistaVideoCanvas.requestFrame === "function";
     var streamFinal = new MediaStream();
-    streamFinal.addTrack(streamCanvas.getVideoTracks()[0]);
+    streamFinal.addTrack(pistaVideoCanvas);
     if (pistaAudio1) streamFinal.addTrack(pistaAudio1);
     if (pistaAudio2) streamFinal.addTrack(pistaAudio2);
 
@@ -1303,6 +1314,7 @@
         function cuadro() {
           if (detenido) return;
           dibujarContenidoUnir(videoEl);
+          if (puedePedirCuadro) pistaVideoCanvas.requestFrame();
           var t = videoEl.currentTime - inicio;
           var transcurridoReal = (performance.now() - inicioReloj) / 1000;
           var avance = acumulado + Math.min(duracionTramo, Math.max(0, t));
