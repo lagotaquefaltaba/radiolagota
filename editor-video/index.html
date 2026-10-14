@@ -57,6 +57,17 @@
   .lista-fotos button{background:#273145;color:var(--text);border:none;border-radius:6px;
     padding:6px 10px;font-size:0.95rem;cursor:pointer;}
   .lista-fotos button.quitar{background:#3d1414;color:#ff8f7d;}
+  .marca-arrastrable{position:absolute;cursor:grab;touch-action:none;user-select:none;
+    -webkit-user-select:none;box-sizing:border-box;display:none;}
+  .marca-arrastrable:active{cursor:grabbing;}
+  .marca-arrastrable.es-texto{background:rgba(0,0,0,0.45);color:#fff;padding:8px 12px;
+    border-radius:6px;font-weight:700;white-space:nowrap;
+    outline:2px dashed rgba(255,255,255,0.55);outline-offset:2px;}
+  .marca-arrastrable.es-imagen{outline:2px dashed rgba(255,255,255,0.55);outline-offset:2px;}
+  .marca-arrastrable.es-imagen img{width:100%;height:100%;display:block;object-fit:contain;}
+  .manija-marca{position:absolute;right:-16px;bottom:-16px;width:32px;height:32px;
+    border-radius:50%;background:var(--cyan);border:3px solid var(--bg);touch-action:none;
+    box-shadow:0 1px 4px rgba(0,0,0,0.5);}
 </style>
 </head>
 <body>
@@ -89,7 +100,9 @@
   </div>
 
   <div id="seccion-video" class="oculto">
-    <video id="video" playsinline controls></video>
+    <div id="envoltorio-video" style="position:relative;">
+      <video id="video" playsinline controls></video>
+    </div>
 
     <h2>2. Recortar (opcional)</h2>
     <div class="fila">
@@ -129,6 +142,9 @@
   <label for="input-fotos">1. Elegí las fotos (podés elegir varias juntas; el orden de la lista es el orden del video)</label>
   <input type="file" id="input-fotos" accept="image/*" multiple>
   <ul class="lista-fotos" id="lista-fotos"></ul>
+  <div id="envoltorio-preview-fotos" class="oculto" style="position:relative;margin-bottom:16px;">
+    <img id="preview-primera-foto" style="width:100%;border-radius:10px;display:block;">
+  </div>
 
   <div class="campo">
     <label>Duración de cada foto</label>
@@ -192,7 +208,9 @@
     sin armar ningún video -para compartir fotos de alguna noticia protegidas
     con el logo de la radio.
   </div>
-  <img id="preview-foto-marca" class="oculto" style="width:100%;border-radius:10px;margin-bottom:12px;">
+  <div id="envoltorio-preview-foto-marca" class="oculto" style="position:relative;margin-bottom:12px;">
+    <img id="preview-foto-marca" style="width:100%;border-radius:10px;display:block;">
+  </div>
 </div>
 
 <!-- =================== MARCA DE AGUA (compartida) =================== -->
@@ -289,6 +307,8 @@
 
   var inputFotos = document.getElementById("input-fotos");
   var listaFotosEl = document.getElementById("lista-fotos");
+  var envoltorioPreviewFotos = document.getElementById("envoltorio-preview-fotos");
+  var previewPrimeraFoto = document.getElementById("preview-primera-foto");
   var radiosModoDurFoto = document.getElementsByName("modo-dur-foto");
   var campoDuracionFija = document.getElementById("campo-duracion-fija");
   var campoTopeFoto = document.getElementById("campo-tope-foto");
@@ -323,7 +343,14 @@
 
   var startTime = 0, endTime = 0, duracionTotal = 0;
   var tipoMarca = "ninguna", textoMarca = "", archivoMarcaImg = null;
-  var posicionMarca = "bd";
+  // Posición/tamaño de la marca: se arrastra/agranda a mano en la vista
+  // previa (en vez de elegir una esquina fija de una lista). marcaCX/marcaCY
+  // son el centro de la marca, como fracción del ancho/alto (0 a 1).
+  // El tamaño se guarda por separado para texto e imagen porque son
+  // escalas muy distintas (una es tamaño de letra, la otra ancho de logo).
+  var marcaCX = 0.74, marcaCY = 0.85;
+  var marcaEscalaTexto = 0.054;
+  var marcaEscalaImagen = 0.28;
   var generando = false;
   var archivoResultado = null;
   var rafId = null;
@@ -349,19 +376,24 @@
       modoFotoMarcaDiv.classList.toggle("oculto", modoActual !== "foto-marca");
       btnGenerar.textContent = modoActual === "foto-marca" ? "▶  Generar imagen" : "▶  Generar video";
       cajaError.innerHTML = "";
+      actualizarChipMarca();
     });
   }
 
   // ---------- modo: marca de agua a una foto ----------
+  var envoltorioPreviewFotoMarca = document.getElementById("envoltorio-preview-foto-marca");
+
   inputFotoMarca.addEventListener("change", function () {
     fotoMarcaArchivo = inputFotoMarca.files[0] || null;
     if (fotoMarcaArchivo) {
       previewFotoMarca.src = URL.createObjectURL(fotoMarcaArchivo);
-      previewFotoMarca.classList.remove("oculto");
+      envoltorioPreviewFotoMarca.classList.remove("oculto");
     } else {
-      previewFotoMarca.classList.add("oculto");
+      envoltorioPreviewFotoMarca.classList.add("oculto");
     }
+    actualizarChipMarca();
   });
+  previewFotoMarca.addEventListener("load", function () { actualizarChipMarca(); });
 
   // ---------- modo: editar un video ----------
   function actualizarMarcasTiempo() {
@@ -381,6 +413,7 @@
       duracionTotal = video.duration;
       startTime = 0;
       endTime = duracionTotal;
+      actualizarChipMarca();
       actualizarMarcasTiempo();
     };
   });
@@ -492,7 +525,16 @@
 
       listaFotosEl.appendChild(li);
     });
+
+    if (fotosArchivos.length > 0) {
+      previewPrimeraFoto.src = URL.createObjectURL(fotosArchivos[0]);
+      envoltorioPreviewFotos.classList.remove("oculto");
+    } else {
+      envoltorioPreviewFotos.classList.add("oculto");
+    }
+    actualizarChipMarca();
   }
+  previewPrimeraFoto.addEventListener("load", function () { actualizarChipMarca(); });
 
   function moverFoto(i, dir) {
     var j = i + dir;
@@ -514,23 +556,7 @@
 
   function dibujarOpcionesMarca() {
     opcionesMarca.innerHTML = "";
-    if (tipoMarca === "ninguna") return;
-
-    var filaPos = document.createElement("div");
-    filaPos.className = "campo";
-    var lbl = document.createElement("label");
-    lbl.textContent = "Posición:";
-    var sel = document.createElement("select");
-    [["ai", "Arriba a la izquierda"], ["ad", "Arriba a la derecha"],
-     ["bi", "Abajo a la izquierda"], ["bd", "Abajo a la derecha"]].forEach(function (p) {
-      var op = document.createElement("option");
-      op.value = p[0]; op.textContent = p[1];
-      if (p[0] === posicionMarca) op.selected = true;
-      sel.appendChild(op);
-    });
-    sel.addEventListener("change", function () { posicionMarca = sel.value; });
-    filaPos.appendChild(lbl); filaPos.appendChild(sel);
-    opcionesMarca.appendChild(filaPos);
+    if (tipoMarca === "ninguna") { actualizarChipMarca(); return; }
 
     if (tipoMarca === "texto") {
       var campo = document.createElement("div");
@@ -540,7 +566,7 @@
       var entrada = document.createElement("input");
       entrada.type = "text";
       entrada.value = textoMarca;
-      entrada.addEventListener("input", function () { textoMarca = entrada.value; });
+      entrada.addEventListener("input", function () { textoMarca = entrada.value; actualizarChipMarca(); });
       campo.appendChild(lbl2); campo.appendChild(entrada);
       opcionesMarca.appendChild(campo);
     } else if (tipoMarca === "imagen") {
@@ -553,10 +579,25 @@
       inputImg.accept = "image/*";
       inputImg.addEventListener("change", function () {
         archivoMarcaImg = inputImg.files[0] || null;
+        if (archivoMarcaImg) {
+          chipImgEl.src = URL.createObjectURL(archivoMarcaImg);
+          chipImgEl.onload = function () { actualizarChipMarca(); };
+        } else {
+          chipImgEl.removeAttribute("src");
+        }
+        actualizarChipMarca();
       });
       campo2.appendChild(lbl3); campo2.appendChild(inputImg);
       opcionesMarca.appendChild(campo2);
     }
+
+    var nota = document.createElement("div");
+    nota.className = "marcas-info";
+    nota.textContent = "Arrastrá el recuadro en la vista previa de arriba para ubicarlo donde quieras, "
+      + "y tocá el circulito celeste de la esquina para agrandarlo o achicarlo.";
+    opcionesMarca.appendChild(nota);
+
+    actualizarChipMarca();
   }
 
   function cargarImagen(archivo) {
@@ -575,34 +616,163 @@
     });
   }
 
+  // marcaCX/marcaCY son el CENTRO de la marca (0 a 1, fracción de ancho/alto)
+  // -se definen arrastrando el recuadro en la vista previa.
   function dibujarMarcaEn(ctx, outW, outH, imgMarca) {
     if (tipoMarca === "ninguna") return;
-    var margen = Math.round(outW * 0.035);
+    var centroX = marcaCX * outW, centroY = marcaCY * outH;
     if (tipoMarca === "texto" && textoMarca) {
-      var tam = Math.max(16, Math.round(outW * 0.054));
+      var tam = Math.max(16, Math.round(outW * marcaEscalaTexto));
       ctx.font = "bold " + tam + "px sans-serif";
       ctx.textBaseline = "alphabetic";
       var ancho = ctx.measureText(textoMarca).width;
-      var x, y;
-      if (posicionMarca === "ai") { x = margen; y = margen + tam; }
-      else if (posicionMarca === "ad") { x = outW - margen - ancho; y = margen + tam; }
-      else if (posicionMarca === "bi") { x = margen; y = outH - margen; }
-      else { x = outW - margen - ancho; y = outH - margen; }
+      var x = centroX - ancho / 2;
+      var y = centroY + tam / 2;
       ctx.fillStyle = "rgba(0,0,0,0.45)";
       ctx.fillRect(x - 10, y - tam - 6, ancho + 20, tam + 16);
       ctx.fillStyle = "#ffffff";
       ctx.fillText(textoMarca, x, y);
     } else if (tipoMarca === "imagen" && imgMarca) {
-      var anchoImg = Math.round(outW * 0.28);
+      var anchoImg = Math.round(outW * marcaEscalaImagen);
       var altoImg = anchoImg * (imgMarca.height / imgMarca.width);
-      var ix, iy;
-      if (posicionMarca === "ai") { ix = margen; iy = margen; }
-      else if (posicionMarca === "ad") { ix = outW - margen - anchoImg; iy = margen; }
-      else if (posicionMarca === "bi") { ix = margen; iy = outH - margen - altoImg; }
-      else { ix = outW - margen - anchoImg; iy = outH - margen - altoImg; }
+      var ix = centroX - anchoImg / 2;
+      var iy = centroY - altoImg / 2;
       ctx.drawImage(imgMarca, ix, iy, anchoImg, altoImg);
     }
   }
+
+  // ---------- marca de agua: vista previa arrastrable ----------
+  var chipMarca = document.createElement("div");
+  chipMarca.className = "marca-arrastrable";
+  var chipTextoEl = document.createElement("span");
+  var chipImgEl = document.createElement("img");
+  chipImgEl.className = "oculto";
+  chipMarca.appendChild(chipTextoEl);
+  chipMarca.appendChild(chipImgEl);
+  var manijaMarca = document.createElement("div");
+  manijaMarca.className = "manija-marca";
+  chipMarca.appendChild(manijaMarca);
+
+  function contenedorActivoPreview() {
+    if (modoActual === "editar") {
+      return seccionVideo.classList.contains("oculto") ? null : document.getElementById("envoltorio-video");
+    }
+    if (modoActual === "fotos") {
+      var env = document.getElementById("envoltorio-preview-fotos");
+      return env.classList.contains("oculto") ? null : env;
+    }
+    if (modoActual === "foto-marca") {
+      var env2 = document.getElementById("envoltorio-preview-foto-marca");
+      return env2.classList.contains("oculto") ? null : env2;
+    }
+    return null;
+  }
+
+  function actualizarChipMarca() {
+    var cont = contenedorActivoPreview();
+    if (!cont || tipoMarca === "ninguna") {
+      chipMarca.style.display = "none";
+      return;
+    }
+    if (chipMarca.parentElement !== cont) cont.appendChild(chipMarca);
+
+    if (tipoMarca === "imagen") {
+      chipMarca.classList.add("es-imagen");
+      chipMarca.classList.remove("es-texto");
+      chipImgEl.classList.toggle("oculto", !archivoMarcaImg);
+      chipTextoEl.classList.add("oculto");
+      var anchoBox = Math.max(30, cont.clientWidth * marcaEscalaImagen);
+      var aspecto = (chipImgEl.naturalWidth && chipImgEl.naturalHeight)
+        ? chipImgEl.naturalHeight / chipImgEl.naturalWidth : 0.5;
+      chipMarca.style.width = anchoBox + "px";
+      chipMarca.style.height = (anchoBox * aspecto) + "px";
+    } else {
+      chipMarca.classList.add("es-texto");
+      chipMarca.classList.remove("es-imagen");
+      chipImgEl.classList.add("oculto");
+      chipTextoEl.classList.remove("oculto");
+      chipTextoEl.textContent = textoMarca || "Tu texto acá";
+      chipTextoEl.style.fontSize = Math.max(14, cont.clientWidth * marcaEscalaTexto) + "px";
+      chipMarca.style.width = "auto";
+      chipMarca.style.height = "auto";
+    }
+
+    chipMarca.style.display = "block";
+    // el tamaño final (sobre todo del texto, que es "auto") se conoce
+    // recién después de que el navegador acomodó el layout -por eso se
+    // ubica en el siguiente cuadro.
+    requestAnimationFrame(function () {
+      var bw = chipMarca.offsetWidth, bh = chipMarca.offsetHeight;
+      chipMarca.style.left = (marcaCX * cont.clientWidth - bw / 2) + "px";
+      chipMarca.style.top = (marcaCY * cont.clientHeight - bh / 2) + "px";
+    });
+  }
+
+  function escalaMarcaActual() { return tipoMarca === "imagen" ? marcaEscalaImagen : marcaEscalaTexto; }
+  function fijarEscalaMarcaActual(v) {
+    if (tipoMarca === "imagen") marcaEscalaImagen = v; else marcaEscalaTexto = v;
+  }
+
+  var arrastrandoMarca = false, arrOrigX = 0, arrOrigY = 0, arrOrigLeft = 0, arrOrigTop = 0;
+
+  chipMarca.addEventListener("pointerdown", function (e) {
+    if (e.target === manijaMarca) return;
+    e.preventDefault();
+    arrastrandoMarca = true;
+    chipMarca.setPointerCapture(e.pointerId);
+    arrOrigX = e.clientX; arrOrigY = e.clientY;
+    arrOrigLeft = chipMarca.offsetLeft; arrOrigTop = chipMarca.offsetTop;
+  });
+  chipMarca.addEventListener("pointermove", function (e) {
+    if (!arrastrandoMarca) return;
+    var cont = chipMarca.parentElement;
+    if (!cont) return;
+    var bw = chipMarca.offsetWidth, bh = chipMarca.offsetHeight;
+    var nuevoLeft = arrOrigLeft + (e.clientX - arrOrigX);
+    var nuevoTop = arrOrigTop + (e.clientY - arrOrigY);
+    // no dejar que el centro salga del todo del recuadro -si no, después
+    // cuesta encontrarlo para agarrarlo de nuevo.
+    var cx = Math.max(0, Math.min(cont.clientWidth, nuevoLeft + bw / 2));
+    var cy = Math.max(0, Math.min(cont.clientHeight, nuevoTop + bh / 2));
+    marcaCX = cx / cont.clientWidth;
+    marcaCY = cy / cont.clientHeight;
+    chipMarca.style.left = (cx - bw / 2) + "px";
+    chipMarca.style.top = (cy - bh / 2) + "px";
+  });
+  function soltarMarca() { arrastrandoMarca = false; }
+  chipMarca.addEventListener("pointerup", soltarMarca);
+  chipMarca.addEventListener("pointercancel", soltarMarca);
+
+  var redimensionandoMarca = false, redOrigDist = 1, redOrigEscala = 0.1;
+
+  function distanciaDesdeCentroChip(e) {
+    var r = chipMarca.getBoundingClientRect();
+    var ccx = r.left + r.width / 2, ccy = r.top + r.height / 2;
+    return Math.hypot(e.clientX - ccx, e.clientY - ccy);
+  }
+
+  manijaMarca.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    redimensionandoMarca = true;
+    manijaMarca.setPointerCapture(e.pointerId);
+    redOrigDist = Math.max(1, distanciaDesdeCentroChip(e));
+    redOrigEscala = escalaMarcaActual();
+  });
+  manijaMarca.addEventListener("pointermove", function (e) {
+    if (!redimensionandoMarca) return;
+    var factor = distanciaDesdeCentroChip(e) / redOrigDist;
+    var nueva = redOrigEscala * factor;
+    var min = tipoMarca === "imagen" ? 0.08 : 0.025;
+    var max = tipoMarca === "imagen" ? 0.6 : 0.16;
+    fijarEscalaMarcaActual(Math.max(min, Math.min(max, nueva)));
+    actualizarChipMarca();
+  });
+  function soltarRedimension() { redimensionandoMarca = false; }
+  manijaMarca.addEventListener("pointerup", soltarRedimension);
+  manijaMarca.addEventListener("pointercancel", soltarRedimension);
+
+  window.addEventListener("resize", function () { actualizarChipMarca(); });
 
   function elegirMime() {
     if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return "";
