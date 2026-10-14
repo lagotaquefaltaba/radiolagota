@@ -973,6 +973,77 @@
     });
   }
 
+  // ---------- FFmpeg (para poner la marca de agua sin grabar "en vivo") ----------
+  // En vez de reproducir el video y grabarlo al mismo tiempo (lo que
+  // obligaba a hacer todo en tiempo real y era la causa de los desfasajes
+  // de audio/cuelgues en celulares modestos), se usa FFmpeg -el mismo
+  // motor que usan casi todos los editores de video- corriendo adentro
+  // del navegador. Así el celular procesa a su propio ritmo, sin la
+  // presión de reproducir mientras graba. La primera vez que se usa tiene
+  // que descargar el motor (unos 25 MB); después queda guardado en el
+  // celular y arranca al toque.
+  var ffmpegInstancia = null;
+  var ffmpegCargando = null;
+
+  function cargarScript(src) {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement("script");
+      s.src = src;
+      s.onload = function () { resolve(); };
+      s.onerror = function () { reject(new Error("No se pudo descargar el motor de video. Revisá la conexión a internet (sólo hace falta la primera vez).")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function cargarFFmpeg(avisarEstado) {
+    if (ffmpegInstancia) return Promise.resolve(ffmpegInstancia);
+    if (ffmpegCargando) return ffmpegCargando;
+    ffmpegCargando = (async function () {
+      if (!window.FFmpeg) {
+        if (avisarEstado) avisarEstado("Preparando el motor de video (sólo la primera vez)...");
+        await cargarScript("https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js");
+      }
+      var ffmpeg = window.FFmpeg.createFFmpeg({
+        log: false,
+        corePath: "https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js"
+      });
+      if (avisarEstado) avisarEstado("Descargando el motor de video (sólo la primera vez)...");
+      await ffmpeg.load();
+      ffmpegInstancia = ffmpeg;
+      return ffmpeg;
+    })();
+    return ffmpegCargando.catch(function (e) {
+      ffmpegCargando = null;
+      throw e;
+    });
+  }
+
+  // Convierte un File/Blob a los bytes que FFmpeg necesita para escribirlo
+  // en su "disco" virtual.
+  function leerBytes(archivo) {
+    if (window.FFmpeg && window.FFmpeg.fetchFile) return window.FFmpeg.fetchFile(archivo);
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(new Uint8Array(reader.result)); };
+      reader.onerror = function () { reject(new Error("No se pudo leer el archivo.")); };
+      reader.readAsArrayBuffer(archivo);
+    });
+  }
+
+  // Dibuja la marca de agua (texto o imagen, como ya se ve en la vista
+  // previa) en un PNG transparente del mismo tamaño que el video de
+  // salida, para pegársela encima con FFmpeg en un solo paso (overlay en
+  // 0,0 -no hace falta calcular dónde va, ya está dibujada en su lugar).
+  function generarPngMarca(outW, outH, imgMarca) {
+    var c = document.createElement("canvas");
+    c.width = outW; c.height = outH;
+    var cx = c.getContext("2d");
+    dibujarMarcaEn(cx, outW, outH, imgMarca);
+    return new Promise(function (resolve) {
+      c.toBlob(function (blob) { resolve(blob); }, "image/png");
+    });
+  }
+
   function elegirMime() {
     if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return "";
     var candidatos = [
@@ -1038,10 +1109,6 @@
   // ---------- generar: editar un video existente ----------
   async function generarDesdeVideo() {
     if (generando) return;
-    if (!window.MediaRecorder || !video.captureStream) {
-      mostrarError("Este navegador no puede procesar video acá (probá actualizar Chrome).");
-      return;
-    }
     var duracionClip = endTime - startTime;
     if (duracionClip <= 0) {
       mostrarError('El "Hasta" tiene que ser mayor que el "Desde".');
@@ -1050,6 +1117,7 @@
     if (!validarMarca()) return;
 
     iniciarUI();
+    estado.textContent = "Preparando...";
 
     var vw = video.videoWidth, vh = video.videoHeight;
     var rot = parseInt(selectGirar.value, 10);
@@ -1066,157 +1134,81 @@
         outH = Math.round((outH * factor) / 2) * 2;
       }
     }
+    // Ancho/alto tienen que ser pares para que el codificador de video los
+    // acepte -por las dudas, aunque ya suelen venir pares.
+    outW = outW - (outW % 2);
+    outH = outH - (outH % 2);
 
-    var canvas = document.createElement("canvas");
-    canvas.width = outW; canvas.height = outH;
-    var ctx = canvas.getContext("2d");
-
-    var imgMarca = null;
-    if (tipoMarca === "imagen") imgMarca = await cargarImagen(archivoMarcaImg);
-
-    var streamOrigen = video.captureStream ? video.captureStream() : video.mozCaptureStream();
-    var pistaAudio = streamOrigen.getAudioTracks()[0];
-    // El cuadro del canvas se captura "a pedido" (0 = sin reloj propio) en
-    // vez de cada 15avo de segundo por su cuenta. Con un reloj propio, el
-    // audio (que sigue el tiempo real sin parar) y el video (que depende de
-    // lo que el celular llegue a dibujar) podían irse desfasando de a
-    // poquito durante toda la grabación -terminaba sonando el audio hasta
-    // el final pero con la imagen atrasada, como si "faltara" un pedazo de
-    // video aunque la duración total coincidiera. Pidiendo el cuadro justo
-    // después de cada dibujo, la imagen queda siempre pegada al sonido.
-    var streamCanvas = canvas.captureStream ? canvas.captureStream(0) : canvas.mozCaptureStream(0);
-    var pistaVideoCanvas = streamCanvas.getVideoTracks()[0];
-    var puedePedirCuadro = typeof pistaVideoCanvas.requestFrame === "function";
-    var streamFinal = new MediaStream();
-    streamFinal.addTrack(pistaVideoCanvas);
-    if (pistaAudio) streamFinal.addTrack(pistaAudio);
-
-    var tipoMime = elegirMime();
-    var grabador;
-    try {
-      grabador = tipoMime
-        ? new MediaRecorder(streamFinal, { mimeType: tipoMime, videoBitsPerSecond: 2500000 })
-        : new MediaRecorder(streamFinal);
-    } catch (e) {
+    var archivoOriginal = inputVideo.files[0];
+    if (!archivoOriginal) {
       generando = false; btnGenerar.disabled = false;
-      mostrarError("No se pudo iniciar la grabación: " + e.message);
+      mostrarError("Elegí primero un video.");
       return;
     }
 
-    var partes = [];
-    grabador.ondataavailable = function (e) { if (e.data && e.data.size) partes.push(e.data); };
+    try {
+      var ffmpeg = await cargarFFmpeg(function (msg) { estado.textContent = msg; });
 
-    var detenido = false;
-    var inicioReloj = 0;
-    // El corte tiene que mirar el tiempo del VIDEO (currentTime), no el
-    // reloj real -si no, en un celular lento que no llega a decodificar en
-    // tiempo real, el video queda en cámara lenta (se graban cuadros
-    // repetidos mientras el video todavía no decodificó el siguiente) y
-    // encima se corta sin haber llegado al final real. Se revisa en cada
-    // cuadro (no con el evento timeupdate, que es más espaciado) y se le da
-    // un margen de tiempo real de sobra -si el celular viene lento, se
-    // espera a que el video realmente termine en vez de cortarlo.
-    var margenSeguridadSeg = Math.max(8, duracionClip);
-    function dibujarFrame() {
-      if (rot === 0) {
-        // caso más común -sin rotar, ahorra el trabajo extra de mover y
-        // girar la matriz del canvas en cada cuadro.
-        ctx.drawImage(video, 0, 0, outW, outH);
+      var pngMarca = null;
+      if (tipoMarca !== "ninguna") {
+        var imgMarca = null;
+        if (tipoMarca === "imagen") imgMarca = await cargarImagen(archivoMarcaImg);
+        pngMarca = await generarPngMarca(outW, outH, imgMarca);
+      }
+
+      estado.textContent = "Procesando el video...";
+      progreso.value = 5;
+
+      ffmpeg.setProgress(function (p) {
+        if (p && typeof p.ratio === "number" && p.ratio >= 0) {
+          var pct = Math.min(99, Math.max(5, Math.round(p.ratio * 100)));
+          progreso.value = pct;
+          estado.textContent = "Procesando el video... " + pct + "%";
+        }
+      });
+
+      ffmpeg.FS("writeFile", "entrada.mp4", await leerBytes(archivoOriginal));
+      if (pngMarca) ffmpeg.FS("writeFile", "marca.png", await leerBytes(pngMarca));
+
+      var filtroVideo = [];
+      if (rot === 90) filtroVideo.push("transpose=1");
+      else if (rot === 180) filtroVideo.push("transpose=1,transpose=1");
+      else if (rot === 270) filtroVideo.push("transpose=2");
+      filtroVideo.push("scale=" + outW + ":" + outH);
+
+      var args = ["-i", "entrada.mp4", "-ss", String(startTime), "-t", String(duracionClip)];
+      if (pngMarca) {
+        args.push("-i", "marca.png");
+        args.push(
+          "-filter_complex",
+          "[0:v]" + filtroVideo.join(",") + "[base];[base][1:v]overlay=0:0[outv]",
+          "-map", "[outv]", "-map", "0:a?"
+        );
       } else {
-        ctx.save();
-        ctx.translate(outW / 2, outH / 2);
-        ctx.rotate((rot * Math.PI) / 180);
-        var swap = rot === 90 || rot === 270;
-        var drawW = swap ? outH : outW;
-        var drawH = swap ? outW : outH;
-        ctx.drawImage(video, -drawW / 2, -drawH / 2, drawW, drawH);
-        ctx.restore();
+        args.push("-vf", filtroVideo.join(","), "-map", "0:v", "-map", "0:a?");
       }
-      dibujarMarcaEn(ctx, outW, outH, imgMarca);
-      if (puedePedirCuadro) pistaVideoCanvas.requestFrame();
+      args.push(
+        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "26", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "128k",
+        "salida.mp4"
+      );
 
-      var t = video.currentTime;
-      var transcurridoReal = (performance.now() - inicioReloj) / 1000;
-      progreso.value = Math.min(100, Math.round(((t - startTime) / duracionClip) * 100));
-      estado.textContent = "Generando... " + formatear(t - startTime) + " / " + formatear(duracionClip);
+      await ffmpeg.run.apply(ffmpeg, args);
 
-      var llegoAlFinal = t >= endTime - 0.05 || video.ended;
-      var seDemoroDemasiado = transcurridoReal >= duracionClip + margenSeguridadSeg;
-      if (llegoAlFinal || seDemoroDemasiado) {
-        motivoCorte = seDemoroDemasiado && !llegoAlFinal ? "tiempo" : "fin";
-        tiempoCorte = t;
-        terminar();
-        return;
-      }
-      rafId = requestAnimationFrame(dibujarFrame);
-    }
+      var datosSalida = ffmpeg.FS("readFile", "salida.mp4");
+      var blob = new Blob([datosSalida.buffer], { type: "video/mp4" });
+      try { ffmpeg.FS("unlink", "entrada.mp4"); } catch (e) { /* no pasa nada */ }
+      try { ffmpeg.FS("unlink", "salida.mp4"); } catch (e) { /* no pasa nada */ }
+      if (pngMarca) { try { ffmpeg.FS("unlink", "marca.png"); } catch (e) { /* no pasa nada */ } }
 
-    var motivoCorte = "", tiempoCorte = 0;
-
-    function terminar() {
-      if (detenido) return;
-      detenido = true;
-      video.pause();
-      if (rafId) cancelAnimationFrame(rafId);
-      if (grabador.state !== "inactive") grabador.stop();
-    }
-
-    grabador.onstop = function () {
-      detenerStream(streamOrigen);
-      detenerStream(streamCanvas);
-      var blob = new Blob(partes, { type: tipoMime || "video/webm" });
       mostrarResultado(blob);
-      // Siempre se muestra el diagnóstico (no sólo cuando algo se ve raro)
-      // para poder comparar: cuánto decía durar el video de entrada, hasta
-      // dónde se le pidió llegar, en qué segundo el programa CREYÓ haber
-      // terminado de dibujar, y -lo más importante- cuánto dura
-      // REALMENTE el archivo ya generado, midiéndolo de nuevo desde cero.
-      // Si ese último número también queda corto, el problema está en la
-      // grabación/codificación en sí, no en cuándo el programa decide
-      // cortar.
-      var videoChequeo = document.createElement("video");
-      videoChequeo.src = URL.createObjectURL(blob);
-      videoChequeo.onloadedmetadata = function () {
-        corregirDuracion(videoChequeo, function (durSalida) {
-          mostrarDiagnostico(
-            "Info técnica -> original: " + formatear(duracionTotal) +
-            " | se pidió hasta: " + formatear(endTime) +
-            " | el programa cortó en: " + formatear(tiempoCorte) +
-            " (" + (motivoCorte === "tiempo" ? "se agotó el tiempo de espera" : "llegó al final") + ")" +
-            " | el archivo generado dura en realidad: " + formatear(durSalida)
-          );
-          URL.revokeObjectURL(videoChequeo.src);
-        });
-      };
-      generando = false;
-      btnGenerar.disabled = false;
-    };
-
-    video.muted = false;
-    video.volume = 0;
-
-    await new Promise(function (resolve) {
-      video.onseeked = function () { video.onseeked = null; resolve(); };
-      video.currentTime = startTime;
-    });
-
-    // Importante: el video tiene que estar REALMENTE reproduciéndose (con
-    // audio ya sonando) antes de arrancar la grabación -si se arranca a
-    // grabar primero y recién después se le da play, queda un huequito al
-    // principio donde el audio ya está sonando pero todavía no hay cuadros
-    // de video, y eso desfasa el video del audio desde el primer segundo
-    // y para siempre (no se corrige solo).
-    await video.play();
-    // Se le pasa un número (milisegundos) para que vaya entregando la
-    // grabación de a pedacitos cada segundo, en vez de guardarla toda junta
-    // en la memoria y recién volcarla al final -en un celular con poca
-    // memoria, guardar un video entero de golpe en la memoria antes de
-    // escribirlo es la causa típica de que el archivo final quede
-    // incompleto/cortado aunque el programa haya "dibujado" todos los
-    // cuadros bien.
-    grabador.start(1000);
-    inicioReloj = performance.now();
-    rafId = requestAnimationFrame(dibujarFrame);
+      progreso.value = 100;
+      estado.textContent = "Listo.";
+    } catch (e) {
+      mostrarError("No se pudo generar el video: " + (e && e.message ? e.message : e));
+    }
+    generando = false;
+    btnGenerar.disabled = false;
   }
 
   // ---------- generar: unir dos videos, uno después del otro ----------
