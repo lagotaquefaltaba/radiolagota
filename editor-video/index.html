@@ -78,6 +78,7 @@
 <div class="radios">
   <label><input type="radio" name="modo" value="editar" checked> Editar un video existente</label>
   <label><input type="radio" name="modo" value="fotos"> Crear video desde fotos</label>
+  <label><input type="radio" name="modo" value="foto-marca"> Ponerle marca de agua a una foto</label>
 </div>
 
 <!-- =================== MODO: EDITAR UN VIDEO =================== -->
@@ -182,6 +183,18 @@
   </div>
 </div>
 
+<!-- =================== MODO: MARCA DE AGUA A UNA FOTO =================== -->
+<div id="modo-foto-marca" class="oculto">
+  <label for="input-foto-marca">Elegí la foto</label>
+  <input type="file" id="input-foto-marca" accept="image/*">
+  <div class="marcas-info">
+    Le pone la marca de agua de abajo a la foto y te la deja descargar al toque,
+    sin armar ningún video -para compartir fotos de alguna noticia protegidas
+    con el logo de la radio.
+  </div>
+  <img id="preview-foto-marca" class="oculto" style="width:100%;border-radius:10px;margin-bottom:12px;">
+</div>
+
 <!-- =================== MARCA DE AGUA (compartida) =================== -->
 <h2>Marca de agua (opcional)</h2>
 <div class="radios">
@@ -202,8 +215,9 @@
   <hr>
   <h2>Listo</h2>
   <video id="video-resultado" playsinline controls></video>
+  <img id="imagen-resultado" class="oculto" style="width:100%;border-radius:10px;background:#000;display:block;">
   <button class="btn btn-main oculto" id="btn-compartir" style="margin-top:12px;">Compartir</button>
-  <a href="#" id="link-descarga" class="descarga" download>Descargar el video</a>
+  <a href="#" id="link-descarga" class="descarga" download>Descargar</a>
 </div>
 
 <script>
@@ -262,6 +276,7 @@
   // ---------- elementos ----------
   var modoEditarDiv = document.getElementById("modo-editar");
   var modoFotosDiv = document.getElementById("modo-fotos");
+  var modoFotoMarcaDiv = document.getElementById("modo-foto-marca");
   var modoActual = "editar";
 
   var video = document.getElementById("video");
@@ -291,6 +306,10 @@
   }
   var inputMusica = document.getElementById("input-musica");
 
+  var inputFotoMarca = document.getElementById("input-foto-marca");
+  var previewFotoMarca = document.getElementById("preview-foto-marca");
+  var fotoMarcaArchivo = null;
+
   var opcionesMarca = document.getElementById("opciones-marca");
   var btnGenerar = document.getElementById("btn-generar");
   var progreso = document.getElementById("progreso");
@@ -298,6 +317,7 @@
   var cajaError = document.getElementById("caja-error");
   var seccionResultado = document.getElementById("seccion-resultado");
   var videoResultado = document.getElementById("video-resultado");
+  var imagenResultado = document.getElementById("imagen-resultado");
   var btnCompartir = document.getElementById("btn-compartir");
   var linkDescarga = document.getElementById("link-descarga");
 
@@ -326,9 +346,22 @@
       modoActual = e.target.value;
       modoEditarDiv.classList.toggle("oculto", modoActual !== "editar");
       modoFotosDiv.classList.toggle("oculto", modoActual !== "fotos");
+      modoFotoMarcaDiv.classList.toggle("oculto", modoActual !== "foto-marca");
+      btnGenerar.textContent = modoActual === "foto-marca" ? "▶  Generar imagen" : "▶  Generar video";
       cajaError.innerHTML = "";
     });
   }
+
+  // ---------- modo: marca de agua a una foto ----------
+  inputFotoMarca.addEventListener("change", function () {
+    fotoMarcaArchivo = inputFotoMarca.files[0] || null;
+    if (fotoMarcaArchivo) {
+      previewFotoMarca.src = URL.createObjectURL(fotoMarcaArchivo);
+      previewFotoMarca.classList.remove("oculto");
+    } else {
+      previewFotoMarca.classList.add("oculto");
+    }
+  });
 
   // ---------- modo: editar un video ----------
   function actualizarMarcasTiempo() {
@@ -593,14 +626,21 @@
       mostrarError('Elegí una imagen para la marca de agua, o elegí "Ninguna".');
       return false;
     }
+    if (modoActual === "foto-marca" && tipoMarca === "ninguna") {
+      mostrarError('Elegí "Texto" o "Imagen / logo" más abajo para marcar la foto -si no, no tiene sentido este modo.');
+      return false;
+    }
     return true;
   }
 
   // ---------- generar: router por modo ----------
   btnGenerar.addEventListener("click", function () {
-    var promesa = modoActual === "editar" ? generarDesdeVideo() : generarDesdeFotos();
+    var promesa;
+    if (modoActual === "editar") promesa = generarDesdeVideo();
+    else if (modoActual === "fotos") promesa = generarDesdeFotos();
+    else promesa = generarFotoConMarca();
     promesa.catch(function (e) {
-      mostrarError("No se pudo generar el video: " + (e && e.message ? e.message : e));
+      mostrarError("No se pudo generar: " + (e && e.message ? e.message : e));
       generando = false;
       btnGenerar.disabled = false;
     });
@@ -923,14 +963,67 @@
     grabador.stop();
   }
 
+  // ---------- generar: marca de agua a una foto ----------
+  async function generarFotoConMarca() {
+    if (generando) return;
+    if (!fotoMarcaArchivo) {
+      mostrarError("Elegí una foto primero.");
+      return;
+    }
+    if (!validarMarca()) return;
+
+    iniciarUI();
+
+    var foto = await cargarImagen(fotoMarcaArchivo);
+
+    // Si la foto es gigante (fotos de cámara modernas), la bajamos a un
+    // tamaño razonable -sigue andando perfecto en redes y pesa mucho menos,
+    // más rápido para generar y compartir desde un celular modesto.
+    var TOPE_LADO = 1600;
+    var outW = foto.width, outH = foto.height;
+    var mayor = Math.max(outW, outH);
+    if (mayor > TOPE_LADO) {
+      var factor = TOPE_LADO / mayor;
+      outW = Math.round(outW * factor);
+      outH = Math.round(outH * factor);
+    }
+
+    var canvas = document.createElement("canvas");
+    canvas.width = outW; canvas.height = outH;
+    var ctx = canvas.getContext("2d");
+    ctx.drawImage(foto, 0, 0, outW, outH);
+
+    var imgMarca = null;
+    if (tipoMarca === "imagen") imgMarca = await cargarImagen(archivoMarcaImg);
+    dibujarMarcaEn(ctx, outW, outH, imgMarca);
+
+    estado.textContent = "Terminando...";
+    progreso.value = 90;
+
+    canvas.toBlob(function (blob) {
+      if (!blob) {
+        generando = false; btnGenerar.disabled = false;
+        mostrarError("No se pudo generar la imagen.");
+        return;
+      }
+      mostrarResultado(blob);
+      generando = false;
+      btnGenerar.disabled = false;
+    }, "image/jpeg", 0.92);
+  }
+
   function mostrarResultado(blob) {
     var url = URL.createObjectURL(blob);
-    videoResultado.src = url;
+    var esImagen = blob.type.indexOf("image") === 0;
+    videoResultado.classList.toggle("oculto", esImagen);
+    imagenResultado.classList.toggle("oculto", !esImagen);
+    if (esImagen) imagenResultado.src = url; else videoResultado.src = url;
     seccionResultado.classList.remove("oculto");
-    var ext = blob.type.indexOf("mp4") !== -1 ? "mp4" : "webm";
-    var nombre = "video_listo_" + Date.now() + "." + ext;
+    var ext = esImagen ? "jpg" : (blob.type.indexOf("mp4") !== -1 ? "mp4" : "webm");
+    var nombre = (esImagen ? "foto_marca_" : "video_listo_") + Date.now() + "." + ext;
     linkDescarga.href = url;
     linkDescarga.download = nombre;
+    linkDescarga.textContent = esImagen ? "Descargar la foto" : "Descargar el video";
     archivoResultado = new File([blob], nombre, { type: blob.type });
     var puedeCompartir = navigator.canShare && (function () {
       try { return navigator.canShare({ files: [archivoResultado] }); } catch (e) { return false; }
