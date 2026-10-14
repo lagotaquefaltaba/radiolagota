@@ -1179,7 +1179,14 @@
       video.currentTime = startTime;
     });
 
-    grabador.start();
+    // Se le pasa un número (milisegundos) para que vaya entregando la
+    // grabación de a pedacitos cada segundo, en vez de guardarla toda junta
+    // en la memoria y recién volcarla al final -en un celular con poca
+    // memoria, guardar un video entero de golpe en la memoria antes de
+    // escribirlo es la causa típica de que el archivo final quede
+    // incompleto/cortado aunque el programa haya "dibujado" todos los
+    // cuadros bien.
+    grabador.start(1000);
     inicioReloj = performance.now();
     await video.play();
     rafId = requestAnimationFrame(dibujarFrame);
@@ -1310,7 +1317,14 @@
       });
     }
 
-    grabador.start();
+    // Se le pasa un número (milisegundos) para que vaya entregando la
+    // grabación de a pedacitos cada segundo, en vez de guardarla toda junta
+    // en la memoria y recién volcarla al final -en un celular con poca
+    // memoria, guardar un video entero de golpe en la memoria antes de
+    // escribirlo es la causa típica de que el archivo final quede
+    // incompleto/cortado aunque el programa haya "dibujado" todos los
+    // cuadros bien.
+    grabador.start(1000);
     await reproducirTramoUnir(video1, inicio1, fin1, 0, "Generando el video 1");
     if (pistaAudio1) pistaAudio1.enabled = false;
     if (pistaAudio2) pistaAudio2.enabled = true;
@@ -1481,7 +1495,14 @@
     }
 
     var duracionTotalSeg = inicios[inicios.length - 1];
-    grabador.start();
+    // Se le pasa un número (milisegundos) para que vaya entregando la
+    // grabación de a pedacitos cada segundo, en vez de guardarla toda junta
+    // en la memoria y recién volcarla al final -en un celular con poca
+    // memoria, guardar un video entero de golpe en la memoria antes de
+    // escribirlo es la causa típica de que el archivo final quede
+    // incompleto/cortado aunque el programa haya "dibujado" todos los
+    // cuadros bien.
+    grabador.start(1000);
     if (audioEl) { try { await audioEl.play(); } catch (e) { /* no pasa nada si no se puede */ } }
 
     await new Promise(function (resolve) {
