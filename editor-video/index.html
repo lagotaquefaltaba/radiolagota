@@ -560,16 +560,18 @@
   }
 
   function cargarImagen(archivo) {
+    // Antes esto pasaba por FileReader -> base64 (readAsDataURL), que con
+    // fotos de cámara pesadas (varios MB) puede fallar en celulares con
+    // poca memoria (el base64 ocupa ~33% más y encima hay que decodificarlo
+    // dos veces). Con un blob URL directo es mucho más liviano.
     return new Promise(function (resolve, reject) {
-      var lector = new FileReader();
-      lector.onload = function () {
-        var img = new Image();
-        img.onload = function () { resolve(img); };
-        img.onerror = reject;
-        img.src = lector.result;
+      var url = URL.createObjectURL(archivo);
+      var img = new Image();
+      img.onload = function () { resolve(img); };
+      img.onerror = function () {
+        reject(new Error("No se pudo abrir esa foto -puede estar dañada o en un formato que el celular no reconoce (probá un .jpg o .png)."));
       };
-      lector.onerror = reject;
-      lector.readAsDataURL(archivo);
+      img.src = url;
     });
   }
 
@@ -640,7 +642,8 @@
     else if (modoActual === "fotos") promesa = generarDesdeFotos();
     else promesa = generarFotoConMarca();
     promesa.catch(function (e) {
-      mostrarError("No se pudo generar: " + (e && e.message ? e.message : e));
+      var detalle = (e && e.message) ? e.message : "Pasó algo inesperado -probá de nuevo, o con otro archivo.";
+      mostrarError("No se pudo generar: " + detalle);
       generando = false;
       btnGenerar.disabled = false;
     });
