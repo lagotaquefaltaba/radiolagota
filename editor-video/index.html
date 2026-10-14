@@ -278,6 +278,7 @@
 <button class="btn btn-main" id="btn-generar">▶  Generar video</button>
 <progress id="progreso" value="0" max="100"></progress>
 <div id="estado"></div>
+<div id="diagnostico-tecnico" class="marcas-info oculto"></div>
 <div id="caja-error"></div>
 
 <div id="seccion-resultado" class="oculto">
@@ -386,6 +387,7 @@
   var btnGenerar = document.getElementById("btn-generar");
   var progreso = document.getElementById("progreso");
   var estado = document.getElementById("estado");
+  var diagnosticoTecnico = document.getElementById("diagnostico-tecnico");
   var cajaError = document.getElementById("caja-error");
   var seccionResultado = document.getElementById("seccion-resultado");
   var videoResultado = document.getElementById("video-resultado");
@@ -430,6 +432,11 @@
       inicio1 = 0; fin1 = duracion1;
       actualizarMarcasTiempo1();
       actualizarChipMarca();
+      corregirDuracion(video1, function (durReal) {
+        duracion1 = durReal;
+        fin1 = durReal;
+        actualizarMarcasTiempo1();
+      });
     };
   });
   document.getElementById("btn-marcar-inicio1").addEventListener("click", function () {
@@ -457,6 +464,11 @@
       duracion2 = video2.duration;
       inicio2 = 0; fin2 = duracion2;
       actualizarMarcasTiempo2();
+      corregirDuracion(video2, function (durReal) {
+        duracion2 = durReal;
+        fin2 = durReal;
+        actualizarMarcasTiempo2();
+      });
     };
   });
   document.getElementById("btn-marcar-inicio2").addEventListener("click", function () {
@@ -493,6 +505,39 @@
     seg = Math.max(0, Math.round(seg));
     var m = Math.floor(seg / 60), s = seg % 60;
     return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  // En muchos celulares (sobre todo Android), apenas carga un video la
+  // duración que informa "video.duration" viene mal -varios segundos MENOS
+  // de lo que el video realmente dura- porque el navegador todavía no
+  // terminó de leer el archivo completo. Esto después se traducía en que
+  // el video procesado salía cortado antes de tiempo, siempre por la misma
+  // cantidad de segundos, sin importar la calidad elegida -porque el corte
+  // no era un problema de velocidad del celular, era que el "Hasta" se
+  // calculaba mal desde el principio. Para arreglarlo, se obliga al
+  // navegador a buscar bien al final del archivo (eso lo hace leer todo y
+  // corregir la duración) y recién ahí se usa el número correcto.
+  function corregirDuracion(videoEl, callback) {
+    var intentos = 0;
+    function intentar() {
+      videoEl.onseeked = function () {
+        videoEl.onseeked = null;
+        var durReal = videoEl.currentTime;
+        if (isFinite(videoEl.duration) && videoEl.duration > durReal) durReal = videoEl.duration;
+        videoEl.onseeked = function () {
+          videoEl.onseeked = null;
+          callback(durReal);
+        };
+        videoEl.currentTime = 0;
+      };
+      try {
+        videoEl.currentTime = 1e9;
+      } catch (e) {
+        videoEl.onseeked = null;
+        callback(videoEl.duration);
+      }
+    }
+    intentar();
   }
 
   function esperar(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -547,6 +592,11 @@
       endTime = duracionTotal;
       actualizarChipMarca();
       actualizarMarcasTiempo();
+      corregirDuracion(video, function (durReal) {
+        duracionTotal = durReal;
+        endTime = durReal;
+        actualizarMarcasTiempo();
+      });
     };
   });
 
@@ -976,6 +1026,13 @@
     seccionResultado.classList.add("oculto");
     progreso.value = 0;
     estado.textContent = "Preparando...";
+    diagnosticoTecnico.classList.add("oculto");
+    diagnosticoTecnico.textContent = "";
+  }
+
+  function mostrarDiagnostico(texto) {
+    diagnosticoTecnico.textContent = texto;
+    diagnosticoTecnico.classList.remove("oculto");
   }
 
   // ---------- generar: editar un video existente ----------
@@ -1079,11 +1136,15 @@
       var llegoAlFinal = t >= endTime - 0.05 || video.ended;
       var seDemoroDemasiado = transcurridoReal >= duracionClip + margenSeguridadSeg;
       if (llegoAlFinal || seDemoroDemasiado) {
+        motivoCorte = seDemoroDemasiado && !llegoAlFinal ? "tiempo" : "fin";
+        tiempoCorte = t;
         terminar();
         return;
       }
       rafId = requestAnimationFrame(dibujarFrame);
     }
+
+    var motivoCorte = "", tiempoCorte = 0;
 
     function terminar() {
       if (detenido) return;
@@ -1098,6 +1159,14 @@
       detenerStream(streamCanvas);
       var blob = new Blob(partes, { type: tipoMime || "video/webm" });
       mostrarResultado(blob);
+      if (motivoCorte === "tiempo" || tiempoCorte < endTime - 0.5) {
+        mostrarDiagnostico(
+          "Info técnica: el video original dura " + formatear(duracionTotal) +
+          ", se pidió hasta " + formatear(endTime) +
+          " y se cortó en " + formatear(tiempoCorte) +
+          " (motivo: " + (motivoCorte === "tiempo" ? "se agotó el tiempo de espera" : "llegó al final") + ")."
+        );
+      }
       generando = false;
       btnGenerar.disabled = false;
     };
