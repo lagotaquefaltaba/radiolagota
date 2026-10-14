@@ -1028,13 +1028,15 @@
 
     var detenido = false;
     var inicioReloj = 0;
-    // El corte se decide por tiempo real transcurrido (reloj), no por
-    // video.currentTime -en un celular modesto, dibujar cada cuadro en el
-    // canvas (más la marca de agua) puede recargar el procesador y hacer
-    // que la reproducción del video se atrase o se trabe un instante; si
-    // el corte dependiera de currentTime, eso recortaba el video final
-    // varios segundos antes de tiempo. Con el reloj real, el video que
-    // sale siempre dura lo que tiene que durar.
+    // El corte tiene que mirar el tiempo del VIDEO (currentTime), no el
+    // reloj real -si no, en un celular lento que no llega a decodificar en
+    // tiempo real, el video queda en cámara lenta (se graban cuadros
+    // repetidos mientras el video todavía no decodificó el siguiente) y
+    // encima se corta sin haber llegado al final real. Se revisa en cada
+    // cuadro (no con el evento timeupdate, que es más espaciado) y se le da
+    // un margen de tiempo real de sobra -si el celular viene lento, se
+    // espera a que el video realmente termine en vez de cortarlo.
+    var margenSeguridadSeg = Math.max(8, duracionClip);
     function dibujarFrame() {
       ctx.save();
       ctx.translate(outW / 2, outH / 2);
@@ -1046,11 +1048,14 @@
       ctx.restore();
       dibujarMarcaEn(ctx, outW, outH, imgMarca);
 
-      var transcurrido = (performance.now() - inicioReloj) / 1000;
-      progreso.value = Math.min(100, Math.round((transcurrido / duracionClip) * 100));
-      estado.textContent = "Generando... " + formatear(transcurrido) + " / " + formatear(duracionClip);
+      var t = video.currentTime;
+      var transcurridoReal = (performance.now() - inicioReloj) / 1000;
+      progreso.value = Math.min(100, Math.round(((t - startTime) / duracionClip) * 100));
+      estado.textContent = "Generando... " + formatear(t - startTime) + " / " + formatear(duracionClip);
 
-      if (transcurrido >= duracionClip) {
+      var llegoAlFinal = t >= endTime - 0.05 || video.ended;
+      var seDemoroDemasiado = transcurridoReal >= duracionClip + margenSeguridadSeg;
+      if (llegoAlFinal || seDemoroDemasiado) {
         terminar();
         return;
       }
@@ -1173,17 +1178,21 @@
     // se recarga un poco dibujando el cuadro.
     function reproducirTramoUnir(videoEl, inicio, fin, acumulado, etiqueta) {
       var duracionTramo = fin - inicio;
+      var margenSeguridadSeg = Math.max(8, duracionTramo);
       return new Promise(function (resolve) {
         var detenido = false;
         var inicioReloj = 0;
         function cuadro() {
           if (detenido) return;
           dibujarContenidoUnir(videoEl);
-          var transcurrido = (performance.now() - inicioReloj) / 1000;
-          var avance = acumulado + Math.min(duracionTramo, transcurrido);
+          var t = videoEl.currentTime - inicio;
+          var transcurridoReal = (performance.now() - inicioReloj) / 1000;
+          var avance = acumulado + Math.min(duracionTramo, Math.max(0, t));
           progreso.value = Math.min(100, Math.round((avance / duracionTotalUnir) * 100));
-          estado.textContent = etiqueta + "... " + formatear(transcurrido) + " / " + formatear(duracionTramo);
-          if (transcurrido >= duracionTramo) {
+          estado.textContent = etiqueta + "... " + formatear(t) + " / " + formatear(duracionTramo);
+          var llegoAlFinal = videoEl.currentTime >= fin - 0.05 || videoEl.ended;
+          var seDemoroDemasiado = transcurridoReal >= duracionTramo + margenSeguridadSeg;
+          if (llegoAlFinal || seDemoroDemasiado) {
             detenido = true;
             videoEl.pause();
             resolve();
