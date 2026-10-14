@@ -1027,6 +1027,14 @@
     grabador.ondataavailable = function (e) { if (e.data && e.data.size) partes.push(e.data); };
 
     var detenido = false;
+    var inicioReloj = 0;
+    // El corte se decide por tiempo real transcurrido (reloj), no por
+    // video.currentTime -en un celular modesto, dibujar cada cuadro en el
+    // canvas (más la marca de agua) puede recargar el procesador y hacer
+    // que la reproducción del video se atrase o se trabe un instante; si
+    // el corte dependiera de currentTime, eso recortaba el video final
+    // varios segundos antes de tiempo. Con el reloj real, el video que
+    // sale siempre dura lo que tiene que durar.
     function dibujarFrame() {
       ctx.save();
       ctx.translate(outW / 2, outH / 2);
@@ -1037,6 +1045,15 @@
       ctx.drawImage(video, -drawW / 2, -drawH / 2, drawW, drawH);
       ctx.restore();
       dibujarMarcaEn(ctx, outW, outH, imgMarca);
+
+      var transcurrido = (performance.now() - inicioReloj) / 1000;
+      progreso.value = Math.min(100, Math.round((transcurrido / duracionClip) * 100));
+      estado.textContent = "Generando... " + formatear(transcurrido) + " / " + formatear(duracionClip);
+
+      if (transcurrido >= duracionClip) {
+        terminar();
+        return;
+      }
       rafId = requestAnimationFrame(dibujarFrame);
     }
 
@@ -1044,17 +1061,8 @@
       if (detenido) return;
       detenido = true;
       video.pause();
-      video.removeEventListener("timeupdate", onTimeUpdate);
       if (rafId) cancelAnimationFrame(rafId);
       if (grabador.state !== "inactive") grabador.stop();
-    }
-
-    function onTimeUpdate() {
-      var t = video.currentTime;
-      var pct = Math.min(100, Math.round(((t - startTime) / duracionClip) * 100));
-      progreso.value = pct;
-      estado.textContent = "Generando... " + formatear(t - startTime) + " / " + formatear(duracionClip);
-      if (t >= endTime) terminar();
     }
 
     grabador.onstop = function () {
@@ -1073,7 +1081,7 @@
     });
 
     grabador.start();
-    video.addEventListener("timeupdate", onTimeUpdate);
+    inicioReloj = performance.now();
     await video.play();
     rafId = requestAnimationFrame(dibujarFrame);
   }
@@ -1159,16 +1167,23 @@
 
     var duracionTotalUnir = dur1 + dur2;
 
+    // Igual que en "Editar un video existente": el corte de cada tramo se
+    // decide por tiempo real transcurrido (reloj), no por
+    // videoEl.currentTime -así no se recorta antes de tiempo si el celular
+    // se recarga un poco dibujando el cuadro.
     function reproducirTramoUnir(videoEl, inicio, fin, acumulado, etiqueta) {
+      var duracionTramo = fin - inicio;
       return new Promise(function (resolve) {
         var detenido = false;
+        var inicioReloj = 0;
         function cuadro() {
           if (detenido) return;
           dibujarContenidoUnir(videoEl);
-          var avance = acumulado + Math.max(0, videoEl.currentTime - inicio);
+          var transcurrido = (performance.now() - inicioReloj) / 1000;
+          var avance = acumulado + Math.min(duracionTramo, transcurrido);
           progreso.value = Math.min(100, Math.round((avance / duracionTotalUnir) * 100));
-          estado.textContent = etiqueta + "... " + formatear(videoEl.currentTime - inicio) + " / " + formatear(fin - inicio);
-          if (videoEl.currentTime >= fin || videoEl.ended) {
+          estado.textContent = etiqueta + "... " + formatear(transcurrido) + " / " + formatear(duracionTramo);
+          if (transcurrido >= duracionTramo) {
             detenido = true;
             videoEl.pause();
             resolve();
@@ -1180,7 +1195,10 @@
           videoEl.onseeked = null;
           videoEl.muted = false;
           videoEl.volume = 1;
-          videoEl.play().then(function () { requestAnimationFrame(cuadro); });
+          videoEl.play().then(function () {
+            inicioReloj = performance.now();
+            requestAnimationFrame(cuadro);
+          });
         };
         videoEl.currentTime = inicio;
       });
