@@ -909,6 +909,20 @@
 
   window.addEventListener("resize", function () { actualizarChipMarca(); });
 
+  // Sin esto, cada video/foto generado deja las "cámaras" internas
+  // (captureStream del video de origen y del canvas) prendidas y
+  // trabajando en segundo plano para siempre, aunque ya no se usen -en un
+  // celular modesto, después de varias pruebas seguidas eso va recargando
+  // cada vez más el procesador y los videos siguientes salen peor (cámara
+  // lenta, cortados). Por eso se "apagan" las pistas apenas se termina de
+  // grabar.
+  function detenerStream(stream) {
+    if (!stream || !stream.getTracks) return;
+    stream.getTracks().forEach(function (t) {
+      try { t.stop(); } catch (e) { /* no pasa nada */ }
+    });
+  }
+
   function elegirMime() {
     if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return "";
     var candidatos = [
@@ -1071,6 +1085,8 @@
     }
 
     grabador.onstop = function () {
+      detenerStream(streamOrigen);
+      detenerStream(streamCanvas);
       var blob = new Blob(partes, { type: tipoMime || "video/webm" });
       mostrarResultado(blob);
       generando = false;
@@ -1154,6 +1170,9 @@
     var partes = [];
     grabador.ondataavailable = function (e) { if (e.data && e.data.size) partes.push(e.data); };
     grabador.onstop = function () {
+      detenerStream(streamV1);
+      detenerStream(streamV2);
+      detenerStream(streamCanvas);
       var blob = new Blob(partes, { type: tipoMime || "video/webm" });
       mostrarResultado(blob);
       generando = false;
@@ -1350,6 +1369,8 @@
 
     grabador.onstop = function () {
       if (audioEl) audioEl.pause();
+      detenerStream(streamAudio);
+      detenerStream(streamCanvas);
       var blob = new Blob(partes, { type: tipoMime || "video/webm" });
       mostrarResultado(blob);
       generando = false;
