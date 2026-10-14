@@ -1003,9 +1003,15 @@
         if (avisarEstado) avisarEstado("Preparando el motor de video (sólo la primera vez)...");
         await cargarScript("https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js");
       }
+      // "core-st" (un solo hilo) en vez de "core": la versión normal
+      // necesita que el servidor mande una configuración especial
+      // (aislamiento de origen cruzado) que una página común como esta no
+      // tiene, y sin eso falla con "SharedArrayBuffer is not defined". La
+      // de un solo hilo no la necesita -es un poco más lenta, pero anda
+      // en cualquier lado.
       var ffmpeg = window.FFmpeg.createFFmpeg({
         log: false,
-        corePath: "https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js"
+        corePath: "https://unpkg.com/@ffmpeg/core-st@0.11.1/dist/ffmpeg-core.js"
       });
       if (avisarEstado) avisarEstado("Descargando el motor de video (sólo la primera vez)...");
       await ffmpeg.load();
