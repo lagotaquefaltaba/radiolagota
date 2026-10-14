@@ -1200,6 +1200,13 @@
       video.currentTime = startTime;
     });
 
+    // Importante: el video tiene que estar REALMENTE reproduciéndose (con
+    // audio ya sonando) antes de arrancar la grabación -si se arranca a
+    // grabar primero y recién después se le da play, queda un huequito al
+    // principio donde el audio ya está sonando pero todavía no hay cuadros
+    // de video, y eso desfasa el video del audio desde el primer segundo
+    // y para siempre (no se corrige solo).
+    await video.play();
     // Se le pasa un número (milisegundos) para que vaya entregando la
     // grabación de a pedacitos cada segundo, en vez de guardarla toda junta
     // en la memoria y recién volcarla al final -en un celular con poca
@@ -1209,7 +1216,6 @@
     // cuadros bien.
     grabador.start(1000);
     inicioReloj = performance.now();
-    await video.play();
     rafId = requestAnimationFrame(dibujarFrame);
   }
 
@@ -1305,7 +1311,7 @@
     // decide por tiempo real transcurrido (reloj), no por
     // videoEl.currentTime -así no se recorta antes de tiempo si el celular
     // se recarga un poco dibujando el cuadro.
-    function reproducirTramoUnir(videoEl, inicio, fin, acumulado, etiqueta) {
+    function reproducirTramoUnir(videoEl, inicio, fin, acumulado, etiqueta, alArrancar) {
       var duracionTramo = fin - inicio;
       var margenSeguridadSeg = Math.max(8, duracionTramo);
       return new Promise(function (resolve) {
@@ -1335,6 +1341,10 @@
           videoEl.muted = false;
           videoEl.volume = 1;
           videoEl.play().then(function () {
+            // Igual que en "Editar un video": el audio ya tiene que estar
+            // sonando antes de arrancar a grabar, para que no quede un
+            // desfasaje fijo desde el principio.
+            if (alArrancar) alArrancar();
             inicioReloj = performance.now();
             requestAnimationFrame(cuadro);
           });
@@ -1343,15 +1353,20 @@
       });
     }
 
-    // Se le pasa un número (milisegundos) para que vaya entregando la
-    // grabación de a pedacitos cada segundo, en vez de guardarla toda junta
-    // en la memoria y recién volcarla al final -en un celular con poca
-    // memoria, guardar un video entero de golpe en la memoria antes de
-    // escribirlo es la causa típica de que el archivo final quede
-    // incompleto/cortado aunque el programa haya "dibujado" todos los
-    // cuadros bien.
-    grabador.start(1000);
-    await reproducirTramoUnir(video1, inicio1, fin1, 0, "Generando el video 1");
+    // El grabador arranca recién cuando el primer video YA está
+    // reproduciéndose (ver alArrancar más abajo), no antes -para que no
+    // quede un hueco inicial donde el audio ya suena y el video todavía no
+    // tiene cuadros grabados.
+    await reproducirTramoUnir(video1, inicio1, fin1, 0, "Generando el video 1", function () {
+      // Se le pasa un número (milisegundos) para que vaya entregando la
+      // grabación de a pedacitos cada segundo, en vez de guardarla toda
+      // junta en la memoria y recién volcarla al final -en un celular con
+      // poca memoria, guardar un video entero de golpe en la memoria antes
+      // de escribirlo es la causa típica de que el archivo final quede
+      // incompleto/cortado aunque el programa haya "dibujado" todos los
+      // cuadros bien.
+      grabador.start(1000);
+    });
     if (pistaAudio1) pistaAudio1.enabled = false;
     if (pistaAudio2) pistaAudio2.enabled = true;
     await reproducirTramoUnir(video2, inicio2, fin2, dur1, "Generando el video 2");
@@ -1521,6 +1536,10 @@
     }
 
     var duracionTotalSeg = inicios[inicios.length - 1];
+    // Primero arranca la música (si hay) y recién cuando ya está sonando
+    // se arranca a grabar -igual que en los otros modos, para que no quede
+    // un desfasaje fijo desde el principio entre la música y las fotos.
+    if (audioEl) { try { await audioEl.play(); } catch (e) { /* no pasa nada si no se puede */ } }
     // Se le pasa un número (milisegundos) para que vaya entregando la
     // grabación de a pedacitos cada segundo, en vez de guardarla toda junta
     // en la memoria y recién volcarla al final -en un celular con poca
@@ -1529,7 +1548,6 @@
     // incompleto/cortado aunque el programa haya "dibujado" todos los
     // cuadros bien.
     grabador.start(1000);
-    if (audioEl) { try { await audioEl.play(); } catch (e) { /* no pasa nada si no se puede */ } }
 
     await new Promise(function (resolve) {
       var inicio = performance.now();
