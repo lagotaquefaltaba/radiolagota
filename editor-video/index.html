@@ -90,6 +90,7 @@
   <label><input type="radio" name="modo" value="editar" checked> Editar un video existente</label>
   <label><input type="radio" name="modo" value="fotos"> Crear video desde fotos</label>
   <label><input type="radio" name="modo" value="foto-marca"> Ponerle marca de agua a una foto</label>
+  <label><input type="radio" name="modo" value="unir"> Unir dos videos (uno después del otro)</label>
 </div>
 
 <!-- =================== MODO: EDITAR UN VIDEO =================== -->
@@ -213,6 +214,56 @@
   </div>
 </div>
 
+<!-- =================== MODO: UNIR DOS VIDEOS =================== -->
+<div id="modo-unir" class="oculto">
+  <label for="input-video1">1. Primer video</label>
+  <input type="file" id="input-video1" accept="video/*">
+
+  <div id="seccion-video1" class="oculto">
+    <div id="envoltorio-video1" style="position:relative;">
+      <video id="video1" playsinline controls></video>
+    </div>
+    <div class="fila" style="margin-top:10px;">
+      <button type="button" class="btn btn-secundario btn-chico" id="btn-marcar-inicio1">Marcar aquí como INICIO</button>
+      <button type="button" class="btn btn-secundario btn-chico" id="btn-marcar-fin1">Marcar aquí como FIN</button>
+    </div>
+    <div class="marcas-info">
+      Desde: <b id="txt-desde1">0:00</b> · Hasta: <b id="txt-hasta1">0:00</b>
+      <br><a href="#" id="link-todo1" style="color:var(--cyan)">Usar el video completo</a>
+    </div>
+  </div>
+
+  <label for="input-video2" style="margin-top:6px;">2. Segundo video</label>
+  <input type="file" id="input-video2" accept="video/*">
+
+  <div id="seccion-video2" class="oculto">
+    <video id="video2" playsinline controls></video>
+    <div class="fila" style="margin-top:10px;">
+      <button type="button" class="btn btn-secundario btn-chico" id="btn-marcar-inicio2">Marcar aquí como INICIO</button>
+      <button type="button" class="btn btn-secundario btn-chico" id="btn-marcar-fin2">Marcar aquí como FIN</button>
+    </div>
+    <div class="marcas-info">
+      Desde: <b id="txt-desde2">0:00</b> · Hasta: <b id="txt-hasta2">0:00</b>
+      <br><a href="#" id="link-todo2" style="color:var(--cyan)">Usar el video completo</a>
+    </div>
+  </div>
+
+  <h2>3. Forma del video final</h2>
+  <div class="campo">
+    <select id="select-orientacion-unir">
+      <option value="vertical" selected>Vertical -reels/stories (720x1280)</option>
+      <option value="horizontal">Horizontal (1280x720)</option>
+      <option value="cuadrado">Cuadrado (1080x1080)</option>
+    </select>
+  </div>
+  <div class="marcas-info">
+    Si los dos videos no son de la misma forma, cada uno se acomoda entero
+    adentro (con una franja negra a los costados si hace falta), para que no
+    se corte ni se deforme ninguno. Primero se escucha el audio del video 1
+    completo y, apenas termina, arranca el audio del video 2 -no se pisan.
+  </div>
+</div>
+
 <!-- =================== MARCA DE AGUA (compartida) =================== -->
 <h2>Marca de agua (opcional)</h2>
 <div class="radios">
@@ -295,6 +346,7 @@
   var modoEditarDiv = document.getElementById("modo-editar");
   var modoFotosDiv = document.getElementById("modo-fotos");
   var modoFotoMarcaDiv = document.getElementById("modo-foto-marca");
+  var modoUnirDiv = document.getElementById("modo-unir");
   var modoActual = "editar";
 
   var video = document.getElementById("video");
@@ -342,6 +394,85 @@
   var linkDescarga = document.getElementById("link-descarga");
 
   var startTime = 0, endTime = 0, duracionTotal = 0;
+
+  // ---------- modo: unir dos videos ----------
+  var inputVideo1 = document.getElementById("input-video1");
+  var video1 = document.getElementById("video1");
+  var seccionVideo1 = document.getElementById("seccion-video1");
+  var txtDesde1 = document.getElementById("txt-desde1");
+  var txtHasta1 = document.getElementById("txt-hasta1");
+  var inputVideo2 = document.getElementById("input-video2");
+  var video2 = document.getElementById("video2");
+  var seccionVideo2 = document.getElementById("seccion-video2");
+  var txtDesde2 = document.getElementById("txt-desde2");
+  var txtHasta2 = document.getElementById("txt-hasta2");
+  var selectOrientacionUnir = document.getElementById("select-orientacion-unir");
+  var inicio1 = 0, fin1 = 0, duracion1 = 0;
+  var inicio2 = 0, fin2 = 0, duracion2 = 0;
+
+  function actualizarMarcasTiempo1() {
+    txtDesde1.textContent = formatear(inicio1);
+    txtHasta1.textContent = formatear(fin1);
+  }
+  function actualizarMarcasTiempo2() {
+    txtDesde2.textContent = formatear(inicio2);
+    txtHasta2.textContent = formatear(fin2);
+  }
+
+  inputVideo1.addEventListener("change", function () {
+    var archivo = inputVideo1.files[0];
+    if (!archivo) return;
+    video1.src = URL.createObjectURL(archivo);
+    seccionVideo1.classList.remove("oculto");
+    cajaError.innerHTML = "";
+    video1.onloadedmetadata = function () {
+      duracion1 = video1.duration;
+      inicio1 = 0; fin1 = duracion1;
+      actualizarMarcasTiempo1();
+      actualizarChipMarca();
+    };
+  });
+  document.getElementById("btn-marcar-inicio1").addEventListener("click", function () {
+    inicio1 = video1.currentTime;
+    if (fin1 <= inicio1) fin1 = duracion1;
+    actualizarMarcasTiempo1();
+  });
+  document.getElementById("btn-marcar-fin1").addEventListener("click", function () {
+    fin1 = video1.currentTime;
+    actualizarMarcasTiempo1();
+  });
+  document.getElementById("link-todo1").addEventListener("click", function (e) {
+    e.preventDefault();
+    inicio1 = 0; fin1 = duracion1;
+    actualizarMarcasTiempo1();
+  });
+
+  inputVideo2.addEventListener("change", function () {
+    var archivo = inputVideo2.files[0];
+    if (!archivo) return;
+    video2.src = URL.createObjectURL(archivo);
+    seccionVideo2.classList.remove("oculto");
+    cajaError.innerHTML = "";
+    video2.onloadedmetadata = function () {
+      duracion2 = video2.duration;
+      inicio2 = 0; fin2 = duracion2;
+      actualizarMarcasTiempo2();
+    };
+  });
+  document.getElementById("btn-marcar-inicio2").addEventListener("click", function () {
+    inicio2 = video2.currentTime;
+    if (fin2 <= inicio2) fin2 = duracion2;
+    actualizarMarcasTiempo2();
+  });
+  document.getElementById("btn-marcar-fin2").addEventListener("click", function () {
+    fin2 = video2.currentTime;
+    actualizarMarcasTiempo2();
+  });
+  document.getElementById("link-todo2").addEventListener("click", function (e) {
+    e.preventDefault();
+    inicio2 = 0; fin2 = duracion2;
+    actualizarMarcasTiempo2();
+  });
   var tipoMarca = "ninguna", textoMarca = "", archivoMarcaImg = null;
   // Posición/tamaño de la marca: se arrastra/agranda a mano en la vista
   // previa (en vez de elegir una esquina fija de una lista). marcaCX/marcaCY
@@ -374,6 +505,7 @@
       modoEditarDiv.classList.toggle("oculto", modoActual !== "editar");
       modoFotosDiv.classList.toggle("oculto", modoActual !== "fotos");
       modoFotoMarcaDiv.classList.toggle("oculto", modoActual !== "foto-marca");
+      modoUnirDiv.classList.toggle("oculto", modoActual !== "unir");
       btnGenerar.textContent = modoActual === "foto-marca" ? "▶  Generar imagen" : "▶  Generar video";
       cajaError.innerHTML = "";
       actualizarChipMarca();
@@ -665,6 +797,9 @@
       var env2 = document.getElementById("envoltorio-preview-foto-marca");
       return env2.classList.contains("oculto") ? null : env2;
     }
+    if (modoActual === "unir") {
+      return seccionVideo1.classList.contains("oculto") ? null : document.getElementById("envoltorio-video1");
+    }
     return null;
   }
 
@@ -810,7 +945,8 @@
     var promesa;
     if (modoActual === "editar") promesa = generarDesdeVideo();
     else if (modoActual === "fotos") promesa = generarDesdeFotos();
-    else promesa = generarFotoConMarca();
+    else if (modoActual === "foto-marca") promesa = generarFotoConMarca();
+    else promesa = generarVideoUnido();
     promesa.catch(function (e) {
       var detalle = (e && e.message) ? e.message : "Pasó algo inesperado -probá de nuevo, o con otro archivo.";
       mostrarError("No se pudo generar: " + detalle);
@@ -940,6 +1076,124 @@
     video.addEventListener("timeupdate", onTimeUpdate);
     await video.play();
     rafId = requestAnimationFrame(dibujarFrame);
+  }
+
+  // ---------- generar: unir dos videos, uno después del otro ----------
+  async function generarVideoUnido() {
+    if (generando) return;
+    if (!window.MediaRecorder || !video1.captureStream) {
+      mostrarError("Este navegador no puede procesar video acá (probá actualizar Chrome).");
+      return;
+    }
+    if (!video1.videoWidth || !video2.videoWidth) {
+      mostrarError("Elegí los dos videos primero.");
+      return;
+    }
+    var dur1 = fin1 - inicio1, dur2 = fin2 - inicio2;
+    if (dur1 <= 0 || dur2 <= 0) {
+      mostrarError('Revisá el "Desde"/"Hasta" de los dos videos -el "Hasta" tiene que ser mayor que el "Desde" en cada uno.');
+      return;
+    }
+    if (!validarMarca()) return;
+
+    iniciarUI();
+
+    var tamanos = { vertical: [720, 1280], horizontal: [1280, 720], cuadrado: [1080, 1080] };
+    var tam = tamanos[selectOrientacionUnir.value] || tamanos.vertical;
+    var outW = tam[0], outH = tam[1];
+
+    var canvas = document.createElement("canvas");
+    canvas.width = outW; canvas.height = outH;
+    var ctx = canvas.getContext("2d");
+
+    var imgMarca = null;
+    if (tipoMarca === "imagen") imgMarca = await cargarImagen(archivoMarcaImg);
+
+    // Cada video trae su propio audio -los dos van en el mismo stream, pero
+    // se prende y apaga cada pista (enabled true/false) para que no se
+    // pisen: mientras suena el video 1, el del video 2 queda en silencio,
+    // y al revés después.
+    var streamV1 = video1.captureStream ? video1.captureStream() : video1.mozCaptureStream();
+    var streamV2 = video2.captureStream ? video2.captureStream() : video2.mozCaptureStream();
+    var pistaAudio1 = streamV1.getAudioTracks()[0] || null;
+    var pistaAudio2 = streamV2.getAudioTracks()[0] || null;
+    if (pistaAudio1) pistaAudio1.enabled = true;
+    if (pistaAudio2) pistaAudio2.enabled = false;
+
+    var streamCanvas = canvas.captureStream ? canvas.captureStream(30) : canvas.mozCaptureStream(30);
+    var streamFinal = new MediaStream();
+    streamFinal.addTrack(streamCanvas.getVideoTracks()[0]);
+    if (pistaAudio1) streamFinal.addTrack(pistaAudio1);
+    if (pistaAudio2) streamFinal.addTrack(pistaAudio2);
+
+    var tipoMime = elegirMime();
+    var grabador;
+    try {
+      grabador = tipoMime
+        ? new MediaRecorder(streamFinal, { mimeType: tipoMime, videoBitsPerSecond: 4000000 })
+        : new MediaRecorder(streamFinal);
+    } catch (e) {
+      generando = false; btnGenerar.disabled = false;
+      mostrarError("No se pudo iniciar la grabación: " + e.message);
+      return;
+    }
+
+    var partes = [];
+    grabador.ondataavailable = function (e) { if (e.data && e.data.size) partes.push(e.data); };
+    grabador.onstop = function () {
+      var blob = new Blob(partes, { type: tipoMime || "video/webm" });
+      mostrarResultado(blob);
+      generando = false;
+      btnGenerar.disabled = false;
+    };
+
+    function dibujarContenidoUnir(videoEl) {
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, outW, outH);
+      var escala = Math.min(outW / videoEl.videoWidth, outH / videoEl.videoHeight);
+      var w = videoEl.videoWidth * escala, h = videoEl.videoHeight * escala;
+      var x = (outW - w) / 2, y = (outH - h) / 2;
+      ctx.drawImage(videoEl, x, y, w, h);
+      dibujarMarcaEn(ctx, outW, outH, imgMarca);
+    }
+
+    var duracionTotalUnir = dur1 + dur2;
+
+    function reproducirTramoUnir(videoEl, inicio, fin, acumulado, etiqueta) {
+      return new Promise(function (resolve) {
+        var detenido = false;
+        function cuadro() {
+          if (detenido) return;
+          dibujarContenidoUnir(videoEl);
+          var avance = acumulado + Math.max(0, videoEl.currentTime - inicio);
+          progreso.value = Math.min(100, Math.round((avance / duracionTotalUnir) * 100));
+          estado.textContent = etiqueta + "... " + formatear(videoEl.currentTime - inicio) + " / " + formatear(fin - inicio);
+          if (videoEl.currentTime >= fin || videoEl.ended) {
+            detenido = true;
+            videoEl.pause();
+            resolve();
+            return;
+          }
+          requestAnimationFrame(cuadro);
+        }
+        videoEl.onseeked = function () {
+          videoEl.onseeked = null;
+          videoEl.muted = false;
+          videoEl.volume = 1;
+          videoEl.play().then(function () { requestAnimationFrame(cuadro); });
+        };
+        videoEl.currentTime = inicio;
+      });
+    }
+
+    grabador.start();
+    await reproducirTramoUnir(video1, inicio1, fin1, 0, "Generando el video 1");
+    if (pistaAudio1) pistaAudio1.enabled = false;
+    if (pistaAudio2) pistaAudio2.enabled = true;
+    await reproducirTramoUnir(video2, inicio2, fin2, dur1, "Generando el video 2");
+
+    estado.textContent = "Terminando...";
+    grabador.stop();
   }
 
   // Para el modo "repetir": arma la secuencia completa de fotos repitiendo
