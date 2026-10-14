@@ -1084,18 +1084,71 @@
 
   // ---------- generar: router por modo ----------
   btnGenerar.addEventListener("click", function () {
+    pedirPermisoNotificacion();
+    pedirPantallaDespierta();
+    var esFoto = modoActual === "foto-marca";
     var promesa;
     if (modoActual === "editar") promesa = generarDesdeVideo();
     else if (modoActual === "fotos") promesa = generarDesdeFotos();
-    else if (modoActual === "foto-marca") promesa = generarFotoConMarca();
+    else if (esFoto) promesa = generarFotoConMarca();
     else promesa = generarVideoUnido();
-    promesa.catch(function (e) {
-      var detalle = (e && e.message) ? e.message : "Pasó algo inesperado -probá de nuevo, o con otro archivo.";
-      mostrarError("No se pudo generar: " + detalle);
-      generando = false;
-      btnGenerar.disabled = false;
-    });
+    promesa
+      .then(function () { avisarListo(esFoto); })
+      .catch(function (e) {
+        var detalle = (e && e.message) ? e.message : "Pasó algo inesperado -probá de nuevo, o con otro archivo.";
+        mostrarError("No se pudo generar: " + detalle);
+        generando = false;
+        btnGenerar.disabled = false;
+      })
+      .then(function () { soltarPantallaDespierta(); });
   });
+
+  // ---------- avisar cuando termina (para poder hacer otra cosa mientras espera) ----------
+  function pedirPermisoNotificacion() {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "default") {
+      try { Notification.requestPermission(); } catch (e) { /* no pasa nada */ }
+    }
+  }
+
+  function avisarListo(esFoto) {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    var titulo = esFoto ? "Tu foto ya está lista" : "Tu video ya está listo";
+    var opciones = {
+      body: "Volvé al Editor de Video para descargarlo o compartirlo.",
+      icon: "icon-192.png",
+      badge: "icon-192.png",
+      tag: "editor-video-listo"
+    };
+    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+      navigator.serviceWorker.ready.then(function (reg) {
+        if (reg && reg.showNotification) reg.showNotification(titulo, opciones);
+        else new Notification(titulo, opciones);
+      }).catch(function () {
+        try { new Notification(titulo, opciones); } catch (e) { /* no pasa nada */ }
+      });
+    } else {
+      try { new Notification(titulo, opciones); } catch (e) { /* no pasa nada */ }
+    }
+  }
+
+  // ---------- no dejar que la pantalla se apague sola mientras procesa ----------
+  // Esto evita que el celular apague la pantalla solo (y con eso frene todo)
+  // mientras se está generando. OJO: se suelta automáticamente si cambiás de
+  // app -eso lo decide el celular, no esta página- pero entre eso y el aviso
+  // de arriba, al menos te enterás apenas esté listo.
+  var pantallaDespierta = null;
+  async function pedirPantallaDespierta() {
+    try {
+      if ("wakeLock" in navigator) pantallaDespierta = await navigator.wakeLock.request("screen");
+    } catch (e) { /* no pasa nada si el celular no lo permite */ }
+  }
+  function soltarPantallaDespierta() {
+    if (pantallaDespierta) {
+      try { pantallaDespierta.release(); } catch (e) { /* no pasa nada */ }
+      pantallaDespierta = null;
+    }
+  }
 
   function iniciarUI() {
     generando = true;
