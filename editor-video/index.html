@@ -1159,14 +1159,28 @@
       detenerStream(streamCanvas);
       var blob = new Blob(partes, { type: tipoMime || "video/webm" });
       mostrarResultado(blob);
-      if (motivoCorte === "tiempo" || tiempoCorte < endTime - 0.5) {
-        mostrarDiagnostico(
-          "Info técnica: el video original dura " + formatear(duracionTotal) +
-          ", se pidió hasta " + formatear(endTime) +
-          " y se cortó en " + formatear(tiempoCorte) +
-          " (motivo: " + (motivoCorte === "tiempo" ? "se agotó el tiempo de espera" : "llegó al final") + ")."
-        );
-      }
+      // Siempre se muestra el diagnóstico (no sólo cuando algo se ve raro)
+      // para poder comparar: cuánto decía durar el video de entrada, hasta
+      // dónde se le pidió llegar, en qué segundo el programa CREYÓ haber
+      // terminado de dibujar, y -lo más importante- cuánto dura
+      // REALMENTE el archivo ya generado, midiéndolo de nuevo desde cero.
+      // Si ese último número también queda corto, el problema está en la
+      // grabación/codificación en sí, no en cuándo el programa decide
+      // cortar.
+      var videoChequeo = document.createElement("video");
+      videoChequeo.src = URL.createObjectURL(blob);
+      videoChequeo.onloadedmetadata = function () {
+        corregirDuracion(videoChequeo, function (durSalida) {
+          mostrarDiagnostico(
+            "Info técnica -> original: " + formatear(duracionTotal) +
+            " | se pidió hasta: " + formatear(endTime) +
+            " | el programa cortó en: " + formatear(tiempoCorte) +
+            " (" + (motivoCorte === "tiempo" ? "se agotó el tiempo de espera" : "llegó al final") + ")" +
+            " | el archivo generado dura en realidad: " + formatear(durSalida)
+          );
+          URL.revokeObjectURL(videoChequeo.src);
+        });
+      };
       generando = false;
       btnGenerar.disabled = false;
     };
