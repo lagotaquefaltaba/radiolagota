@@ -1509,6 +1509,15 @@
         audioEl.onerror = resolve;
         audioEl.load();
       });
+      // La duración que informa el audio apenas carga puede venir mal
+      // (más corta de lo real) en algunos archivos -la misma falla que ya
+      // se corrigió para los videos. Si no se corrige acá, la secuencia de
+      // fotos se calcula para una canción "más corta" de lo que es en
+      // realidad: la grabación termina antes de tiempo (quedándose
+      // pegada en la última foto) pero la música de fondo sigue sonando
+      // hasta su final real, dando la sensación de que "la última foto
+      // se queda hasta que termina el tema".
+      await new Promise(function (resolve) { corregirDuracion(audioEl, resolve); });
       if (musicaInicio > 0 && isFinite(audioEl.duration)) {
         audioEl.currentTime = Math.min(musicaInicio, Math.max(0, audioEl.duration - 0.1));
       }
@@ -1631,6 +1640,10 @@
 
     estado.textContent = "Terminando...";
     grabador.stop();
+    // Por las dudas la corrección de arriba no alcance con algún archivo
+    // raro, esto asegura que la música de fondo nunca siga sonando sola
+    // después de que la grabación ya terminó.
+    if (audioEl) { try { audioEl.pause(); } catch (e) { /* no pasa nada */ } }
   }
 
   // ---------- generar: marca de agua a una foto ----------
