@@ -131,8 +131,8 @@
     <div class="campo">
       <select id="select-tamano">
         <option value="original">Original</option>
-        <option value="720" selected>Mediano (720p) -recomendado</option>
-        <option value="480">Chico (480p) -más rápido y liviano</option>
+        <option value="720">Mediano (720p)</option>
+        <option value="480" selected>Chico (480p) -recomendado, más rápido y liviano</option>
       </select>
     </div>
   </div>
@@ -1019,7 +1019,10 @@
 
     var streamOrigen = video.captureStream ? video.captureStream() : video.mozCaptureStream();
     var pistaAudio = streamOrigen.getAudioTracks()[0];
-    var streamCanvas = canvas.captureStream ? canvas.captureStream(30) : canvas.mozCaptureStream(30);
+    // 15 cuadros por segundo en vez de 30: en un celular modesto, dibujar y
+    // codificar la mitad de cuadros alivia bastante el procesador, y para
+    // un video de redes sociales no se nota.
+    var streamCanvas = canvas.captureStream ? canvas.captureStream(15) : canvas.mozCaptureStream(15);
     var pistaVideoCanvas = streamCanvas.getVideoTracks()[0];
     var streamFinal = new MediaStream();
     streamFinal.addTrack(pistaVideoCanvas);
@@ -1029,7 +1032,7 @@
     var grabador;
     try {
       grabador = tipoMime
-        ? new MediaRecorder(streamFinal, { mimeType: tipoMime, videoBitsPerSecond: 4000000 })
+        ? new MediaRecorder(streamFinal, { mimeType: tipoMime, videoBitsPerSecond: 2500000 })
         : new MediaRecorder(streamFinal);
     } catch (e) {
       generando = false; btnGenerar.disabled = false;
@@ -1052,14 +1055,20 @@
     // espera a que el video realmente termine en vez de cortarlo.
     var margenSeguridadSeg = Math.max(8, duracionClip);
     function dibujarFrame() {
-      ctx.save();
-      ctx.translate(outW / 2, outH / 2);
-      ctx.rotate((rot * Math.PI) / 180);
-      var swap = rot === 90 || rot === 270;
-      var drawW = swap ? outH : outW;
-      var drawH = swap ? outW : outH;
-      ctx.drawImage(video, -drawW / 2, -drawH / 2, drawW, drawH);
-      ctx.restore();
+      if (rot === 0) {
+        // caso más común -sin rotar, ahorra el trabajo extra de mover y
+        // girar la matriz del canvas en cada cuadro.
+        ctx.drawImage(video, 0, 0, outW, outH);
+      } else {
+        ctx.save();
+        ctx.translate(outW / 2, outH / 2);
+        ctx.rotate((rot * Math.PI) / 180);
+        var swap = rot === 90 || rot === 270;
+        var drawW = swap ? outH : outW;
+        var drawH = swap ? outW : outH;
+        ctx.drawImage(video, -drawW / 2, -drawH / 2, drawW, drawH);
+        ctx.restore();
+      }
       dibujarMarcaEn(ctx, outW, outH, imgMarca);
 
       var t = video.currentTime;
@@ -1149,7 +1158,7 @@
     if (pistaAudio1) pistaAudio1.enabled = true;
     if (pistaAudio2) pistaAudio2.enabled = false;
 
-    var streamCanvas = canvas.captureStream ? canvas.captureStream(30) : canvas.mozCaptureStream(30);
+    var streamCanvas = canvas.captureStream ? canvas.captureStream(15) : canvas.mozCaptureStream(15);
     var streamFinal = new MediaStream();
     streamFinal.addTrack(streamCanvas.getVideoTracks()[0]);
     if (pistaAudio1) streamFinal.addTrack(pistaAudio1);
@@ -1159,7 +1168,7 @@
     var grabador;
     try {
       grabador = tipoMime
-        ? new MediaRecorder(streamFinal, { mimeType: tipoMime, videoBitsPerSecond: 4000000 })
+        ? new MediaRecorder(streamFinal, { mimeType: tipoMime, videoBitsPerSecond: 2500000 })
         : new MediaRecorder(streamFinal);
     } catch (e) {
       generando = false; btnGenerar.disabled = false;
