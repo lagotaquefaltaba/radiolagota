@@ -1011,6 +1011,7 @@
       // en cualquier lado.
       var ffmpeg = window.FFmpeg.createFFmpeg({
         log: false,
+        mainName: "main",
         corePath: "https://unpkg.com/@ffmpeg/core-st@0.11.1/dist/ffmpeg-core.js"
       });
       if (avisarEstado) avisarEstado("Descargando el motor de video (sólo la primera vez)...");
