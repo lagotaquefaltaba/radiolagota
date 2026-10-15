@@ -80,6 +80,8 @@
   Si no ves el botón de instalar: tocá los 3 puntitos de arriba a la derecha del navegador → "Agregar a pantalla de inicio".
 </p>
 
+<button class="btn btn-secundario" id="btn-limpiar-todo" style="margin-bottom:16px;">🧹 Limpiar todo / Empezar de nuevo</button>
+
 <div class="aviso">
   Esta app hace el trabajo adentro del propio celular, así que en un celular
   más modesto puede tardar un poco. Si se traba o tarda demasiado: probá con
@@ -267,10 +269,10 @@
 <!-- =================== MARCA DE AGUA (compartida) =================== -->
 <h2>Marca de agua (opcional)</h2>
 <div class="radios">
-  <label><input type="radio" name="marca" value="ninguna" checked> Ninguna</label>
-  <label><input type="radio" name="marca" value="texto"> Texto</label>
-  <label><input type="radio" name="marca" value="imagen"> Imagen / logo</label>
+  <label><input type="checkbox" id="check-marca-texto"> Texto</label>
+  <label><input type="checkbox" id="check-marca-imagen"> Imagen / logo</label>
 </div>
+<div class="marcas-info">Podés activar las dos juntas si querés.</div>
 <div id="opciones-marca"></div>
 
 <!-- =================== GENERAR (compartido) =================== -->
@@ -299,6 +301,22 @@
       navigator.serviceWorker.register("sw.js").catch(function () {});
     });
   }
+
+  // ---------- botón "Limpiar todo / Empezar de nuevo" ----------
+  // Es la forma más segura de arrancar de cero sin tener que cerrar y
+  // volver a abrir la app -lo que hace exactamente lo mismo que cerrarla
+  // del todo (vuelve a cargar la página), sólo que de forma confiable en
+  // un solo toque. Esto también es lo que hay que usar si la app "queda
+  // colgada" después de estar un rato en segundo plano en el celular
+  // (Android a veces no cierra la página del todo al minimizarla, y la
+  // retoma como estaba -con archivos de la vez anterior que ya no son
+  // válidos- en vez de abrirla de nuevo; eso es lo que causaba el error
+  // de "la foto está mal" después de reabrir la app).
+  document.getElementById("btn-limpiar-todo").addEventListener("click", function () {
+    if (window.confirm("¿Limpiar todo y empezar de nuevo? Se pierde lo que tengas cargado ahora (fotos, video, marca de agua).")) {
+      window.location.reload();
+    }
+  });
 
   // ---------- botón "Instalar esta app" ----------
   (function () {
@@ -431,7 +449,7 @@
       duracion1 = video1.duration;
       inicio1 = 0; fin1 = duracion1;
       actualizarMarcasTiempo1();
-      actualizarChipMarca();
+      actualizarChipsMarca();
       corregirDuracion(video1, function (durReal) {
         duracion1 = durReal;
         fin1 = durReal;
@@ -485,16 +503,15 @@
     inicio2 = 0; fin2 = duracion2;
     actualizarMarcasTiempo2();
   });
-  var tipoMarca = "ninguna", textoMarca = "", archivoMarcaImg = null;
+  // El texto y la imagen/logo son dos marcas INDEPENDIENTES -se pueden
+  // activar juntas, cada una. Por eso cada una tiene su propia posición
+  // (arrastrada a mano en la vista previa) y su propia escala; si no, al
+  // activar las dos quedarían siempre pegadas una encima de la otra.
+  var marcaTextoActiva = false, marcaImagenActiva = false;
+  var textoMarca = "", archivoMarcaImg = null;
   var marcaColorTexto = "#ffffff";
-  // Posición/tamaño de la marca: se arrastra/agranda a mano en la vista
-  // previa (en vez de elegir una esquina fija de una lista). marcaCX/marcaCY
-  // son el centro de la marca, como fracción del ancho/alto (0 a 1).
-  // El tamaño se guarda por separado para texto e imagen porque son
-  // escalas muy distintas (una es tamaño de letra, la otra ancho de logo).
-  var marcaCX = 0.74, marcaCY = 0.85;
-  var marcaEscalaTexto = 0.054;
-  var marcaEscalaImagen = 0.28;
+  var marcaTextoCX = 0.74, marcaTextoCY = 0.85, marcaEscalaTexto = 0.054;
+  var marcaImagenCX = 0.74, marcaImagenCY = 0.6, marcaEscalaImagen = 0.28;
   var generando = false;
   var archivoResultado = null;
   var rafId = null;
@@ -554,7 +571,7 @@
       modoUnirDiv.classList.toggle("oculto", modoActual !== "unir");
       btnGenerar.textContent = modoActual === "foto-marca" ? "▶  Generar imagen" : "▶  Generar video";
       cajaError.innerHTML = "";
-      actualizarChipMarca();
+      actualizarChipsMarca();
     });
   }
 
@@ -569,9 +586,9 @@
     } else {
       envoltorioPreviewFotoMarca.classList.add("oculto");
     }
-    actualizarChipMarca();
+    actualizarChipsMarca();
   });
-  previewFotoMarca.addEventListener("load", function () { actualizarChipMarca(); });
+  previewFotoMarca.addEventListener("load", function () { actualizarChipsMarca(); });
 
   // ---------- modo: editar un video ----------
   function actualizarMarcasTiempo() {
@@ -591,7 +608,7 @@
       duracionTotal = video.duration;
       startTime = 0;
       endTime = duracionTotal;
-      actualizarChipMarca();
+      actualizarChipsMarca();
       actualizarMarcasTiempo();
       corregirDuracion(video, function (durReal) {
         duracionTotal = durReal;
@@ -715,9 +732,9 @@
     } else {
       envoltorioPreviewFotos.classList.add("oculto");
     }
-    actualizarChipMarca();
+    actualizarChipsMarca();
   }
-  previewPrimeraFoto.addEventListener("load", function () { actualizarChipMarca(); });
+  previewPrimeraFoto.addEventListener("load", function () { actualizarChipsMarca(); });
 
   function moverFoto(i, dir) {
     var j = i + dir;
@@ -728,20 +745,24 @@
     refrescarListaFotos();
   }
 
-  // ---------- marca de agua (compartida) ----------
-  var radiosMarca = document.getElementsByName("marca");
-  for (var i = 0; i < radiosMarca.length; i++) {
-    radiosMarca[i].addEventListener("change", function (e) {
-      tipoMarca = e.target.value;
-      dibujarOpcionesMarca();
-    });
-  }
+  // ---------- marca de agua (compartida): texto e imagen son independientes,
+  // se pueden activar las dos juntas ----------
+  var checkMarcaTexto = document.getElementById("check-marca-texto");
+  var checkMarcaImagen = document.getElementById("check-marca-imagen");
+  checkMarcaTexto.addEventListener("change", function () {
+    marcaTextoActiva = checkMarcaTexto.checked;
+    dibujarOpcionesMarca();
+  });
+  checkMarcaImagen.addEventListener("change", function () {
+    marcaImagenActiva = checkMarcaImagen.checked;
+    dibujarOpcionesMarca();
+  });
 
   function dibujarOpcionesMarca() {
     opcionesMarca.innerHTML = "";
-    if (tipoMarca === "ninguna") { actualizarChipMarca(); return; }
+    if (!marcaTextoActiva && !marcaImagenActiva) { actualizarChipsMarca(); return; }
 
-    if (tipoMarca === "texto") {
+    if (marcaTextoActiva) {
       var campo = document.createElement("div");
       campo.className = "campo";
       var lbl2 = document.createElement("label");
@@ -749,7 +770,7 @@
       var entrada = document.createElement("input");
       entrada.type = "text";
       entrada.value = textoMarca;
-      entrada.addEventListener("input", function () { textoMarca = entrada.value; actualizarChipMarca(); });
+      entrada.addEventListener("input", function () { textoMarca = entrada.value; actualizarChipsMarca(); });
       campo.appendChild(lbl2); campo.appendChild(entrada);
       opcionesMarca.appendChild(campo);
 
@@ -766,11 +787,13 @@
       entradaColor.style.border = "none";
       entradaColor.addEventListener("input", function () {
         marcaColorTexto = entradaColor.value;
-        actualizarChipMarca();
+        actualizarChipsMarca();
       });
       campoColor.appendChild(lblColor); campoColor.appendChild(entradaColor);
       opcionesMarca.appendChild(campoColor);
-    } else if (tipoMarca === "imagen") {
+    }
+
+    if (marcaImagenActiva) {
       var campo2 = document.createElement("div");
       campo2.className = "campo";
       var lbl3 = document.createElement("label");
@@ -782,11 +805,11 @@
         archivoMarcaImg = inputImg.files[0] || null;
         if (archivoMarcaImg) {
           chipImgEl.src = URL.createObjectURL(archivoMarcaImg);
-          chipImgEl.onload = function () { actualizarChipMarca(); };
+          chipImgEl.onload = function () { actualizarChipsMarca(); };
         } else {
           chipImgEl.removeAttribute("src");
         }
-        actualizarChipMarca();
+        actualizarChipsMarca();
       });
       campo2.appendChild(lbl3); campo2.appendChild(inputImg);
       opcionesMarca.appendChild(campo2);
@@ -794,11 +817,11 @@
 
     var nota = document.createElement("div");
     nota.className = "marcas-info";
-    nota.textContent = "Arrastrá el recuadro en la vista previa de arriba para ubicarlo donde quieras, "
-      + "y tocá el circulito celeste de la esquina para agrandarlo o achicarlo.";
+    nota.textContent = "Arrastrá cada recuadro en la vista previa de arriba para ubicarlo donde quieras, "
+      + "y tocá su circulito celeste para agrandarlo o achicarlo.";
     opcionesMarca.appendChild(nota);
 
-    actualizarChipMarca();
+    actualizarChipsMarca();
   }
 
   function cargarImagen(archivo) {
@@ -817,12 +840,13 @@
     });
   }
 
-  // marcaCX/marcaCY son el CENTRO de la marca (0 a 1, fracción de ancho/alto)
-  // -se definen arrastrando el recuadro en la vista previa.
+  // Texto e imagen son dos marcas independientes, cada una con su propia
+  // posición (marcaTextoCX/CY, marcaImagenCX/CY -el CENTRO de cada una,
+  // de 0 a 1, fracción de ancho/alto- definida arrastrando su recuadro en
+  // la vista previa). Si las dos están activas, se dibujan las dos.
   function dibujarMarcaEn(ctx, outW, outH, imgMarca) {
-    if (tipoMarca === "ninguna") return;
-    var centroX = marcaCX * outW, centroY = marcaCY * outH;
-    if (tipoMarca === "texto" && textoMarca) {
+    if (marcaTextoActiva && textoMarca) {
+      var centroX = marcaTextoCX * outW, centroY = marcaTextoCY * outH;
       var tam = Math.max(16, Math.round(outW * marcaEscalaTexto));
       // La lista de fuentes de acá abajo importa: "sans-serif" sola alcanza
       // para las letras, pero en el dibujado de canvas de algunos Android
@@ -838,27 +862,22 @@
       ctx.fillRect(x - 10, y - tam - 6, ancho + 20, tam + 16);
       ctx.fillStyle = marcaColorTexto;
       ctx.fillText(textoMarca, x, y);
-    } else if (tipoMarca === "imagen" && imgMarca) {
+    }
+    if (marcaImagenActiva && imgMarca) {
+      var centroXImg = marcaImagenCX * outW, centroYImg = marcaImagenCY * outH;
       var anchoImg = Math.round(outW * marcaEscalaImagen);
       var altoImg = anchoImg * (imgMarca.height / imgMarca.width);
-      var ix = centroX - anchoImg / 2;
-      var iy = centroY - altoImg / 2;
+      var ix = centroXImg - anchoImg / 2;
+      var iy = centroYImg - altoImg / 2;
       ctx.drawImage(imgMarca, ix, iy, anchoImg, altoImg);
     }
   }
 
   // ---------- marca de agua: vista previa arrastrable ----------
-  var chipMarca = document.createElement("div");
-  chipMarca.className = "marca-arrastrable";
-  var chipTextoEl = document.createElement("span");
-  var chipImgEl = document.createElement("img");
-  chipImgEl.className = "oculto";
-  chipMarca.appendChild(chipTextoEl);
-  chipMarca.appendChild(chipImgEl);
-  var manijaMarca = document.createElement("div");
-  manijaMarca.className = "manija-marca";
-  chipMarca.appendChild(manijaMarca);
-
+  // Texto e imagen tienen cada una su propio recuadro arrastrable/
+  // redimensionable, armados con la misma "fábrica" (antes había un solo
+  // recuadro compartido, que ya no alcanza porque ahora las dos marcas
+  // pueden estar activas juntas).
   function contenedorActivoPreview() {
     if (modoActual === "editar") {
       return seccionVideo.classList.contains("oculto") ? null : document.getElementById("envoltorio-video");
@@ -877,112 +896,142 @@
     return null;
   }
 
-  function actualizarChipMarca() {
-    var cont = contenedorActivoPreview();
-    if (!cont || tipoMarca === "ninguna") {
-      chipMarca.style.display = "none";
-      return;
-    }
-    if (chipMarca.parentElement !== cont) cont.appendChild(chipMarca);
+  function crearChipMarca(opciones) {
+    // opciones: { getCX, setCX, getCY, setCY, getEscala, setEscala,
+    //             escalaMin, escalaMax, estaActiva, actualizarContenido }
+    var chip = document.createElement("div");
+    chip.className = "marca-arrastrable";
+    var manija = document.createElement("div");
+    manija.className = "manija-marca";
+    chip.appendChild(manija);
 
-    if (tipoMarca === "imagen") {
-      chipMarca.classList.add("es-imagen");
-      chipMarca.classList.remove("es-texto");
-      chipImgEl.classList.toggle("oculto", !archivoMarcaImg);
-      chipTextoEl.classList.add("oculto");
-      var anchoBox = Math.max(30, cont.clientWidth * marcaEscalaImagen);
-      var aspecto = (chipImgEl.naturalWidth && chipImgEl.naturalHeight)
-        ? chipImgEl.naturalHeight / chipImgEl.naturalWidth : 0.5;
-      chipMarca.style.width = anchoBox + "px";
-      chipMarca.style.height = (anchoBox * aspecto) + "px";
-    } else {
-      chipMarca.classList.add("es-texto");
-      chipMarca.classList.remove("es-imagen");
-      chipImgEl.classList.add("oculto");
-      chipTextoEl.classList.remove("oculto");
+    function actualizar() {
+      var cont = contenedorActivoPreview();
+      if (!cont || !opciones.estaActiva()) {
+        chip.style.display = "none";
+        return;
+      }
+      if (chip.parentElement !== cont) cont.appendChild(chip);
+      opciones.actualizarContenido(chip, cont);
+      chip.style.display = "block";
+      // el tamaño final (sobre todo del texto, que es "auto") se conoce
+      // recién después de que el navegador acomodó el layout -por eso se
+      // ubica en el siguiente cuadro.
+      requestAnimationFrame(function () {
+        var bw = chip.offsetWidth, bh = chip.offsetHeight;
+        chip.style.left = (opciones.getCX() * cont.clientWidth - bw / 2) + "px";
+        chip.style.top = (opciones.getCY() * cont.clientHeight - bh / 2) + "px";
+      });
+    }
+
+    var arrastrando = false, arrOrigX = 0, arrOrigY = 0, arrOrigLeft = 0, arrOrigTop = 0;
+    chip.addEventListener("pointerdown", function (e) {
+      if (e.target === manija) return;
+      e.preventDefault();
+      arrastrando = true;
+      chip.setPointerCapture(e.pointerId);
+      arrOrigX = e.clientX; arrOrigY = e.clientY;
+      arrOrigLeft = chip.offsetLeft; arrOrigTop = chip.offsetTop;
+    });
+    chip.addEventListener("pointermove", function (e) {
+      if (!arrastrando) return;
+      var cont = chip.parentElement;
+      if (!cont) return;
+      var bw = chip.offsetWidth, bh = chip.offsetHeight;
+      var nuevoLeft = arrOrigLeft + (e.clientX - arrOrigX);
+      var nuevoTop = arrOrigTop + (e.clientY - arrOrigY);
+      // no dejar que el centro salga del todo del recuadro -si no, después
+      // cuesta encontrarlo para agarrarlo de nuevo.
+      var cx = Math.max(0, Math.min(cont.clientWidth, nuevoLeft + bw / 2));
+      var cy = Math.max(0, Math.min(cont.clientHeight, nuevoTop + bh / 2));
+      opciones.setCX(cx / cont.clientWidth);
+      opciones.setCY(cy / cont.clientHeight);
+      chip.style.left = (cx - bw / 2) + "px";
+      chip.style.top = (cy - bh / 2) + "px";
+    });
+    function soltarArrastre() { arrastrando = false; }
+    chip.addEventListener("pointerup", soltarArrastre);
+    chip.addEventListener("pointercancel", soltarArrastre);
+
+    var redimensionando = false, redOrigDist = 1, redOrigEscala = 0.1;
+    function distanciaDesdeCentroChip(e) {
+      var r = chip.getBoundingClientRect();
+      var ccx = r.left + r.width / 2, ccy = r.top + r.height / 2;
+      return Math.hypot(e.clientX - ccx, e.clientY - ccy);
+    }
+    manija.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      redimensionando = true;
+      manija.setPointerCapture(e.pointerId);
+      redOrigDist = Math.max(1, distanciaDesdeCentroChip(e));
+      redOrigEscala = opciones.getEscala();
+    });
+    manija.addEventListener("pointermove", function (e) {
+      if (!redimensionando) return;
+      var factor = distanciaDesdeCentroChip(e) / redOrigDist;
+      var nueva = redOrigEscala * factor;
+      opciones.setEscala(Math.max(opciones.escalaMin, Math.min(opciones.escalaMax, nueva)));
+      actualizar();
+    });
+    function soltarRedimension() { redimensionando = false; }
+    manija.addEventListener("pointerup", soltarRedimension);
+    manija.addEventListener("pointercancel", soltarRedimension);
+
+    return actualizar;
+  }
+
+  var chipTextoEl = document.createElement("span");
+  var actualizarChipTexto = crearChipMarca({
+    getCX: function () { return marcaTextoCX; },
+    setCX: function (v) { marcaTextoCX = v; },
+    getCY: function () { return marcaTextoCY; },
+    setCY: function (v) { marcaTextoCY = v; },
+    getEscala: function () { return marcaEscalaTexto; },
+    setEscala: function (v) { marcaEscalaTexto = v; },
+    escalaMin: 0.025,
+    escalaMax: 0.16,
+    estaActiva: function () { return marcaTextoActiva; },
+    actualizarContenido: function (chip, cont) {
+      chip.classList.add("es-texto");
+      chip.appendChild(chipTextoEl);
       chipTextoEl.textContent = textoMarca || "Tu texto acá";
       chipTextoEl.style.fontSize = Math.max(14, cont.clientWidth * marcaEscalaTexto) + "px";
       chipTextoEl.style.color = marcaColorTexto;
-      chipMarca.style.width = "auto";
-      chipMarca.style.height = "auto";
-    }
+      chip.style.width = "auto";
+      chip.style.height = "auto";
+    },
+  });
 
-    chipMarca.style.display = "block";
-    // el tamaño final (sobre todo del texto, que es "auto") se conoce
-    // recién después de que el navegador acomodó el layout -por eso se
-    // ubica en el siguiente cuadro.
-    requestAnimationFrame(function () {
-      var bw = chipMarca.offsetWidth, bh = chipMarca.offsetHeight;
-      chipMarca.style.left = (marcaCX * cont.clientWidth - bw / 2) + "px";
-      chipMarca.style.top = (marcaCY * cont.clientHeight - bh / 2) + "px";
-    });
+  var chipImgEl = document.createElement("img");
+  var actualizarChipImagen = crearChipMarca({
+    getCX: function () { return marcaImagenCX; },
+    setCX: function (v) { marcaImagenCX = v; },
+    getCY: function () { return marcaImagenCY; },
+    setCY: function (v) { marcaImagenCY = v; },
+    getEscala: function () { return marcaEscalaImagen; },
+    setEscala: function (v) { marcaEscalaImagen = v; },
+    escalaMin: 0.08,
+    escalaMax: 0.6,
+    estaActiva: function () { return marcaImagenActiva; },
+    actualizarContenido: function (chip, cont) {
+      chip.classList.add("es-imagen");
+      chip.appendChild(chipImgEl);
+      chipImgEl.classList.toggle("oculto", !archivoMarcaImg);
+      var anchoBox = Math.max(30, cont.clientWidth * marcaEscalaImagen);
+      var aspecto = (chipImgEl.naturalWidth && chipImgEl.naturalHeight)
+        ? chipImgEl.naturalHeight / chipImgEl.naturalWidth : 0.5;
+      chip.style.width = anchoBox + "px";
+      chip.style.height = (anchoBox * aspecto) + "px";
+    },
+  });
+
+  function actualizarChipsMarca() {
+    actualizarChipTexto();
+    actualizarChipImagen();
   }
 
-  function escalaMarcaActual() { return tipoMarca === "imagen" ? marcaEscalaImagen : marcaEscalaTexto; }
-  function fijarEscalaMarcaActual(v) {
-    if (tipoMarca === "imagen") marcaEscalaImagen = v; else marcaEscalaTexto = v;
-  }
-
-  var arrastrandoMarca = false, arrOrigX = 0, arrOrigY = 0, arrOrigLeft = 0, arrOrigTop = 0;
-
-  chipMarca.addEventListener("pointerdown", function (e) {
-    if (e.target === manijaMarca) return;
-    e.preventDefault();
-    arrastrandoMarca = true;
-    chipMarca.setPointerCapture(e.pointerId);
-    arrOrigX = e.clientX; arrOrigY = e.clientY;
-    arrOrigLeft = chipMarca.offsetLeft; arrOrigTop = chipMarca.offsetTop;
-  });
-  chipMarca.addEventListener("pointermove", function (e) {
-    if (!arrastrandoMarca) return;
-    var cont = chipMarca.parentElement;
-    if (!cont) return;
-    var bw = chipMarca.offsetWidth, bh = chipMarca.offsetHeight;
-    var nuevoLeft = arrOrigLeft + (e.clientX - arrOrigX);
-    var nuevoTop = arrOrigTop + (e.clientY - arrOrigY);
-    // no dejar que el centro salga del todo del recuadro -si no, después
-    // cuesta encontrarlo para agarrarlo de nuevo.
-    var cx = Math.max(0, Math.min(cont.clientWidth, nuevoLeft + bw / 2));
-    var cy = Math.max(0, Math.min(cont.clientHeight, nuevoTop + bh / 2));
-    marcaCX = cx / cont.clientWidth;
-    marcaCY = cy / cont.clientHeight;
-    chipMarca.style.left = (cx - bw / 2) + "px";
-    chipMarca.style.top = (cy - bh / 2) + "px";
-  });
-  function soltarMarca() { arrastrandoMarca = false; }
-  chipMarca.addEventListener("pointerup", soltarMarca);
-  chipMarca.addEventListener("pointercancel", soltarMarca);
-
-  var redimensionandoMarca = false, redOrigDist = 1, redOrigEscala = 0.1;
-
-  function distanciaDesdeCentroChip(e) {
-    var r = chipMarca.getBoundingClientRect();
-    var ccx = r.left + r.width / 2, ccy = r.top + r.height / 2;
-    return Math.hypot(e.clientX - ccx, e.clientY - ccy);
-  }
-
-  manijaMarca.addEventListener("pointerdown", function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    redimensionandoMarca = true;
-    manijaMarca.setPointerCapture(e.pointerId);
-    redOrigDist = Math.max(1, distanciaDesdeCentroChip(e));
-    redOrigEscala = escalaMarcaActual();
-  });
-  manijaMarca.addEventListener("pointermove", function (e) {
-    if (!redimensionandoMarca) return;
-    var factor = distanciaDesdeCentroChip(e) / redOrigDist;
-    var nueva = redOrigEscala * factor;
-    var min = tipoMarca === "imagen" ? 0.08 : 0.025;
-    var max = tipoMarca === "imagen" ? 0.6 : 0.16;
-    fijarEscalaMarcaActual(Math.max(min, Math.min(max, nueva)));
-    actualizarChipMarca();
-  });
-  function soltarRedimension() { redimensionandoMarca = false; }
-  manijaMarca.addEventListener("pointerup", soltarRedimension);
-  manijaMarca.addEventListener("pointercancel", soltarRedimension);
-
-  window.addEventListener("resize", function () { actualizarChipMarca(); });
+  window.addEventListener("resize", function () { actualizarChipsMarca(); });
 
   // Sin esto, cada video/foto generado deja las "cámaras" internas
   // (captureStream del video de origen y del canvas) prendidas y
@@ -1096,12 +1145,12 @@
   }
 
   function validarMarca() {
-    if (tipoMarca === "imagen" && !archivoMarcaImg) {
-      mostrarError('Elegí una imagen para la marca de agua, o elegí "Ninguna".');
+    if (marcaImagenActiva && !archivoMarcaImg) {
+      mostrarError('Elegí una imagen para la marca de agua, o destildá "Imagen / logo".');
       return false;
     }
-    if (modoActual === "foto-marca" && tipoMarca === "ninguna") {
-      mostrarError('Elegí "Texto" o "Imagen / logo" más abajo para marcar la foto -si no, no tiene sentido este modo.');
+    if (modoActual === "foto-marca" && !marcaTextoActiva && !marcaImagenActiva) {
+      mostrarError('Activá "Texto" o "Imagen / logo" más abajo para marcar la foto -si no, no tiene sentido este modo.');
       return false;
     }
     return true;
@@ -1235,9 +1284,9 @@
       var ffmpeg = await cargarFFmpeg(function (msg) { estado.textContent = msg; });
 
       var pngMarca = null;
-      if (tipoMarca !== "ninguna") {
+      if (marcaTextoActiva || marcaImagenActiva) {
         var imgMarca = null;
-        if (tipoMarca === "imagen") imgMarca = await cargarImagen(archivoMarcaImg);
+        if (marcaImagenActiva) imgMarca = await cargarImagen(archivoMarcaImg);
         pngMarca = await generarPngMarca(outW, outH, imgMarca);
       }
 
@@ -1325,7 +1374,7 @@
     var ctx = canvas.getContext("2d");
 
     var imgMarca = null;
-    if (tipoMarca === "imagen") imgMarca = await cargarImagen(archivoMarcaImg);
+    if (marcaImagenActiva) imgMarca = await cargarImagen(archivoMarcaImg);
 
     // Cada video trae su propio audio -los dos van en el mismo stream, pero
     // se prende y apaga cada pista (enabled true/false) para que no se
@@ -1517,7 +1566,7 @@
     var ctx = canvas.getContext("2d");
 
     var imgMarca = null;
-    if (tipoMarca === "imagen") imgMarca = await cargarImagen(archivoMarcaImg);
+    if (marcaImagenActiva) imgMarca = await cargarImagen(archivoMarcaImg);
 
     var imagenesCargadas = [];
     for (var i = 0; i < fotosArchivos.length; i++) {
@@ -1702,7 +1751,7 @@
     ctx.drawImage(foto, 0, 0, outW, outH);
 
     var imgMarca = null;
-    if (tipoMarca === "imagen") imgMarca = await cargarImagen(archivoMarcaImg);
+    if (marcaImagenActiva) imgMarca = await cargarImagen(archivoMarcaImg);
     dibujarMarcaEn(ctx, outW, outH, imgMarca);
 
     estado.textContent = "Terminando...";
