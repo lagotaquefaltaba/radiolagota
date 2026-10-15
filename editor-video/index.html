@@ -486,6 +486,7 @@
     actualizarMarcasTiempo2();
   });
   var tipoMarca = "ninguna", textoMarca = "", archivoMarcaImg = null;
+  var marcaColorTexto = "#ffffff";
   // Posición/tamaño de la marca: se arrastra/agranda a mano en la vista
   // previa (en vez de elegir una esquina fija de una lista). marcaCX/marcaCY
   // son el centro de la marca, como fracción del ancho/alto (0 a 1).
@@ -744,13 +745,31 @@
       var campo = document.createElement("div");
       campo.className = "campo";
       var lbl2 = document.createElement("label");
-      lbl2.textContent = "Texto a mostrar:";
+      lbl2.textContent = "Texto a mostrar (podés usar emoticonos 😀🎉🔥):";
       var entrada = document.createElement("input");
       entrada.type = "text";
       entrada.value = textoMarca;
       entrada.addEventListener("input", function () { textoMarca = entrada.value; actualizarChipMarca(); });
       campo.appendChild(lbl2); campo.appendChild(entrada);
       opcionesMarca.appendChild(campo);
+
+      var campoColor = document.createElement("div");
+      campoColor.className = "campo";
+      var lblColor = document.createElement("label");
+      lblColor.textContent = "Color de la letra:";
+      var entradaColor = document.createElement("input");
+      entradaColor.type = "color";
+      entradaColor.value = marcaColorTexto;
+      entradaColor.style.width = "60px";
+      entradaColor.style.height = "40px";
+      entradaColor.style.padding = "0";
+      entradaColor.style.border = "none";
+      entradaColor.addEventListener("input", function () {
+        marcaColorTexto = entradaColor.value;
+        actualizarChipMarca();
+      });
+      campoColor.appendChild(lblColor); campoColor.appendChild(entradaColor);
+      opcionesMarca.appendChild(campoColor);
     } else if (tipoMarca === "imagen") {
       var campo2 = document.createElement("div");
       campo2.className = "campo";
@@ -805,14 +824,19 @@
     var centroX = marcaCX * outW, centroY = marcaCY * outH;
     if (tipoMarca === "texto" && textoMarca) {
       var tam = Math.max(16, Math.round(outW * marcaEscalaTexto));
-      ctx.font = "bold " + tam + "px sans-serif";
+      // La lista de fuentes de acá abajo importa: "sans-serif" sola alcanza
+      // para las letras, pero en el dibujado de canvas de algunos Android
+      // no alcanza para que tambien dibuje los emoticonos (quedan en blanco
+      // o como un cuadradito) -agregando la fuente de emojis como respaldo
+      // en la misma lista, el navegador la usa sólo para esos caracteres.
+      ctx.font = "bold " + tam + 'px sans-serif, "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji"';
       ctx.textBaseline = "alphabetic";
       var ancho = ctx.measureText(textoMarca).width;
       var x = centroX - ancho / 2;
       var y = centroY + tam / 2;
       ctx.fillStyle = "rgba(0,0,0,0.45)";
       ctx.fillRect(x - 10, y - tam - 6, ancho + 20, tam + 16);
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = marcaColorTexto;
       ctx.fillText(textoMarca, x, y);
     } else if (tipoMarca === "imagen" && imgMarca) {
       var anchoImg = Math.round(outW * marcaEscalaImagen);
@@ -878,6 +902,7 @@
       chipTextoEl.classList.remove("oculto");
       chipTextoEl.textContent = textoMarca || "Tu texto acá";
       chipTextoEl.style.fontSize = Math.max(14, cont.clientWidth * marcaEscalaTexto) + "px";
+      chipTextoEl.style.color = marcaColorTexto;
       chipMarca.style.width = "auto";
       chipMarca.style.height = "auto";
     }
