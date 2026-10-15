@@ -512,6 +512,10 @@
   var marcaColorTexto = "#ffffff";
   var marcaTextoCX = 0.74, marcaTextoCY = 0.85, marcaEscalaTexto = 0.054;
   var marcaImagenCX = 0.74, marcaImagenCY = 0.6, marcaEscalaImagen = 0.28;
+  // Bytes del video original, leídos a memoria apenas se elige el archivo
+  // (ver el "change" de inputVideo) -evita un error de lectura en Android
+  // si después se abre otro selector de archivos (p.ej. para el logo).
+  var bytesVideoOriginal = null;
   var generando = false;
   var archivoResultado = null;
   var rafId = null;
@@ -604,6 +608,20 @@
     seccionVideo.classList.remove("oculto");
     seccionResultado.classList.add("oculto");
     cajaError.innerHTML = "";
+    // Se leen los bytes del video a memoria ACÁ, apenas se elige -no se
+    // espera a leerlos recién al generar. Si no, en algunos Android pasa
+    // esto: elegís el video, después abrís el selector de archivos de
+    // nuevo para elegir una imagen de marca de agua, y ese segundo
+    // selector hace que el navegador le revoque al video el permiso de
+    // lectura que tenía (aunque el archivo siga ahí, elegido) -entonces
+    // al generar el video explota con un error de "no se pudo leer el
+    // archivo" que no tiene nada que ver con que el video esté mal.
+    // Leyéndolo de entrada, cuando el permiso todavía está fresco, se
+    // evita el problema.
+    bytesVideoOriginal = null;
+    leerBytes(archivo)
+      .then(function (bytes) { bytesVideoOriginal = bytes; })
+      .catch(function () { bytesVideoOriginal = null; });
     video.onloadedmetadata = function () {
       duracionTotal = video.duration;
       startTime = 0;
@@ -834,7 +852,12 @@
       var img = new Image();
       img.onload = function () { resolve(img); };
       img.onerror = function () {
-        reject(new Error("No se pudo abrir esa foto -puede estar dañada o en un formato que el celular no reconoce (probá un .jpg o .png)."));
+        reject(new Error(
+          "No se pudo abrir esa foto -puede estar dañada o en un formato que el celular no " +
+          "reconoce (probá un .jpg o .png). También puede pasar si elegiste esta foto hace rato " +
+          "y después usaste otro selector de archivos en el medio -en ese caso, volvé a elegirla " +
+          "de nuevo recién antes de generar."
+        ));
       };
       img.src = url;
     });
@@ -1301,7 +1324,23 @@
         }
       });
 
-      ffmpeg.FS("writeFile", "entrada.mp4", await leerBytes(archivoOriginal));
+      var bytesVideo = bytesVideoOriginal;
+      if (!bytesVideo) {
+        // No se llegó a leer de entrada (o falló) -se reintenta acá. Si
+        // esto también falla, es el problema de permiso de lectura de
+        // Android descripto arriba.
+        try {
+          bytesVideo = await leerBytes(archivoOriginal);
+        } catch (eLectura) {
+          throw new Error(
+            "No se pudo leer el video. En algunos celulares pasa esto si elegiste el video y " +
+            "después abriste el selector de archivos de nuevo (por ejemplo para elegir la imagen " +
+            "del logo) -volvé a elegir el video (paso 1) y generá de nuevo, sin volver a tocar otro " +
+            "selector de archivos en el medio."
+          );
+        }
+      }
+      ffmpeg.FS("writeFile", "entrada.mp4", bytesVideo);
       if (pngMarca) ffmpeg.FS("writeFile", "marca.png", await leerBytes(pngMarca));
 
       var filtroVideo = [];
