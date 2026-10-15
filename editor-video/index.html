@@ -84,8 +84,11 @@
 
 <div class="aviso">
   Esta app hace el trabajo adentro del propio celular, así que en un celular
-  más modesto puede tardar un poco. Si se traba o tarda demasiado: probá con
-  menos contenido (un video más corto, o menos fotos), o elegí un tamaño más chico.
+  más modesto puede tardar un poco, o directamente quedarse sin memoria y
+  cerrarse sola a la mitad (se ve como que "se borró todo" y volvés a
+  empezar). Si te pasa seguido: elegí "Chico (480p)" en vez de un tamaño
+  más grande, achicá el video antes (cortalo más corto, o usá menos fotos),
+  y evitá tener otras apps abiertas de fondo mientras genera.
 </div>
 
 <div class="radios">
@@ -1341,6 +1344,15 @@
         }
       }
       ffmpeg.FS("writeFile", "entrada.mp4", bytesVideo);
+      // Apenas FFmpeg ya tiene su propia copia (adentro de su "disco"
+      // virtual), se suelta ésta de acá -si no, durante la parte más
+      // pesada (la transcodificación en sí) hay DOS copias enteras del
+      // video dando vueltas en la memoria del celular al mismo tiempo
+      // (ésta más la de adentro de FFmpeg), lo que en un celular con poca
+      // RAM (como un gama baja) puede ser la diferencia entre que
+      // Android mate la pestaña a la mitad o no.
+      bytesVideo = null;
+      bytesVideoOriginal = null;
       if (pngMarca) ffmpeg.FS("writeFile", "marca.png", await leerBytes(pngMarca));
 
       var filtroVideo = [];
