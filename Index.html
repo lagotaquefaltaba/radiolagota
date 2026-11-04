@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Radio La Gota 107.5 FM</title>
+<meta name="description" content="Escuchá Radio La Gota Que Faltaba 107.5 FM en vivo, las 24 horas, desde tu celular.">
+<meta property="og:title" content="Radio La Gota 107.5 FM">
+<meta property="og:description" content="Escuchá Radio La Gota Que Faltaba en vivo, las 24 horas, desde tu celular.">
+<meta property="og:image" content="https://i.imgur.com/sJFQNSB.jpeg">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://radio.lagota.online/">
+<link rel="icon" sizes="192x192" href="https://i.imgur.com/sJFQNSB.jpeg">
+<link rel="icon" sizes="512x512" href="https://i.imgur.com/sJFQNSB.jpeg">
+<link rel="apple-touch-icon" href="https://i.imgur.com/sJFQNSB.jpeg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#070714">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+body{background:#070714;color:#fff;padding:14px 14px 36px;overflow-x:hidden}
+.wrap{max-width:460px;margin:auto;text-align:center}
+.card{background:linear-gradient(180deg,#12122a,#0e0e22);border:1px solid rgba(0,210,255,.22);border-radius:26px;padding:22px 16px 18px;box-shadow:0 18px 40px rgba(0,0,0,.5)}
+.top{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:.12em;color:#8ea0ff;text-transform:uppercase;font-weight:800}
+.vigia{width:32px;height:32px;border-radius:50%;background:#fff;color:#111;display:flex;align-items:center;justify-content:center;font-size:16px}
+.logo{width:132px;height:132px;border-radius:50%;object-fit:cover;margin:18px auto 12px;border:3px solid rgba(0,210,255,.6);box-shadow:0 0 0 8px rgba(0,210,255,.08),0 0 34px rgba(0,180,255,.45)}
+h1{font-size:23px;line-height:1.1;text-transform:uppercase}
+h1 span{font-size:15px;color:#5fd8ff;letter-spacing:.18em}
+.pill{display:inline-flex;align-items:center;gap:6px;margin:10px 0 16px;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:.08em;background:#2a0f16;color:#ff8fa0;border:1px solid rgba(255,80,100,.35)}
+.pill i{width:8px;height:8px;border-radius:50%;background:#ff3b57;box-shadow:0 0 0 0 rgba(255,59,87,.6);animation:pulse 1.6s infinite}
+.pill.ok{background:#0f2a1c;color:#6ff2b0;border-color:rgba(52,211,153,.35)}
+.pill.ok i{background:#34d399;animation:none}
+.pill.rec{background:#2a210f;color:#ffd166;border-color:rgba(255,200,80,.35)}
+@keyframes pulse{70%{box-shadow:0 0 0 9px rgba(255,59,87,0)}100%{box-shadow:0 0 0 0 rgba(255,59,87,0)}}
+.playrow{display:flex;align-items:center;gap:14px;justify-content:center;margin:4px 0 16px}
+.btn-play{width:76px;height:76px;border:none;border-radius:50%;background:linear-gradient(180deg,#2ea6ff,#0056c8);color:#fff;font-size:30px;cursor:pointer;box-shadow:0 10px 22px rgba(0,120,255,.45);flex-shrink:0}
+.btn-play:active{transform:scale(.97)}
+.vol{flex:1;max-width:190px;accent-color:#00c2ff}
+.vol-lab{font-size:12px;color:#aab4ff;min-width:38px}
+.redes{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.chip{min-height:44px;padding:0 12px;border:none;border-radius:12px;color:#fff;font-weight:800;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.fb{background:#1877f2}.ig{background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)}.tt{background:#000;border:1px solid #333}
+.wa{background:#1faa53}.share{background:#00b4d8}
+.acciones{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:14px 0}
+.acc{border:none;border-radius:16px;padding:13px 8px;font-weight:800;font-size:13px;cursor:pointer;color:#fff}
+.acc small{display:block;font-weight:600;font-size:11px;opacity:.9;margin-top:2px}
+.colaborar{background:linear-gradient(90deg,#009ee3,#00b1ea)}
+.instalar{background:linear-gradient(90deg,#ff9500,#ffcc00);color:#111}
+.senal{background:linear-gradient(90deg,#00b188,#00c497)}
+.seccion{display:none;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:16px;margin:0 0 14px;text-align:left}
+.seccion h3{color:#00e5ff;font-size:15px;margin-bottom:8px}
+.dato{background:rgba(0,158,227,.18);padding:11px;border-radius:10px;font-weight:800;word-break:break-all;margin:8px 0}
+.copiar{background:#34d399;border:none;border-radius:10px;padding:10px 16px;font-weight:800;cursor:pointer}
+.mini{font-size:12px;color:#a5b4fc;line-height:1.5;margin-top:8px}
+.ayuda{background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.4);border-radius:14px;padding:15px;margin:16px 0;text-align:left;font-size:13px;line-height:1.6}
+.ayuda b{color:#ffdd44}
+.pie{font-size:12px;color:#cce0ff;line-height:1.6;padding-top:14px;border-top:1px solid rgba(255,255,255,.14)}
+body.pausa .logo,body.pausa .pill i{animation-play-state:paused}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="top"><span>Venado Tuerto • 107.5 FM</span><span class="vigia">👁</span></div>
+    <img class="logo" src="https://i.imgur.com/sJFQNSB.jpeg" alt="La Gota Que Faltaba">
+    <h1>La Gota Que Faltaba<br><span>107.5 FM • En vivo</span></h1>
+    <div id="estado" class="pill"><i></i><span id="estadoTexto">Listo para sonar</span></div>
+    <div class="playrow">
+      <button class="btn-play" id="btnPlay" aria-label="Reproducir">▶</button>
+      <input type="range" class="vol" id="volumenControl" min="0" max="100" value="80">
+      <span class="vol-lab" id="volLab">80%</span>
+    </div>
+    <div class="redes">
+      <a class="chip fb" href="https://www.facebook.com/turadiolagota" target="_blank">Facebook</a>
+      <a class="chip ig" href="https://www.instagram.com/lag.otaquefaltaba?igsh=MW84NXBjOXFwdTdp" target="_blank">Instagram</a>
+      <a class="chip tt" href="https://www.tiktok.com/@lagotaquefaltaba" target="_blank">TikTok</a>
+      <a class="chip wa" href="https://wa.me/5493462344790?text=Hola!%20Quiero%20pedir%20este%20tema" target="_blank">🎵 Pedir tema</a>
+      <a class="chip wa" href="https://wa.me/543462598048" target="_blank">💼 Comercial</a>
+      <a class="chip share" href="#" onclick="compartirApp();return false">🔗 Compartir</a>
+    </div>
+  </div>
+
+  <div class="acciones">
+    <button class="acc colaborar" onclick="mostrarSeccion('seccionColaborar')">💙 Colaborar<small>¿Querés colaborar?</small></button>
+    <button class="acc instalar" id="botonInstalar">📲 Instalar<small>En tu celular</small></button>
+    <button class="acc senal" onclick="mostrarSeccion('seccionSenal')">📡 Tomar señal<small>URL directa</small></button>
+  </div>
+
+  <div class="seccion" id="seccionColaborar">
+    <h3>💙 ¿Querés colaborar con nuestro medio? Hacé clic y ayudanos a seguir sonando</h3>
+    <p class="mini">Tu aporte, del monto que quieras, nos ayuda a pagar la música, internet y equipos para seguir al aire las 24 hs. ¡Gracias!</p>
+    <div class="dato">Alias: radiolagota</div>
+    <button class="copiar" onclick="copiarTexto('radiolagota')">📋 Copiar alias</button>
+    <p class="mini">Alias: radiolagota • Mercado Pago<br>📩 Enviar comprobante al: 03462 598048</p>
+  </div>
+
+  <div class="seccion" id="seccionSenal">
+    <h3>URL directa de la señal</h3>
+    <div class="dato">https://lagota.online:8000/lagota</div>
+    <button class="copiar" onclick="copiarTexto('https://lagota.online:8000/lagota')">📋 Copiar URL</button>
+  </div>
+
+  <div class="ayuda"><b>¿Cómo instalar la App?</b><br>• Si usás Facebook: Tocá los 3 puntitos → Ir a navegador.<br>• Si no ves "Instalar": Tocá 3 puntitos → Agregar a pantalla de inicio.<br>• Soporte: 📞 3462 598048</div>
+  <div class="pie">© Desarrollado por El Vigía<br>Si querés tu propia aplicación, comunicate al: +54 9 3462 598048 - Argentina</div>
+</div>
+
+<script>
+const audio=document.getElementById('reproductor')||(()=>{const a=document.createElement('audio');a.id='reproductor';a.preload='none';a.crossOrigin='anonymous';document.body.appendChild(a);return a})();
+const btnPlay=document.getElementById('btnPlay');
+const volumenControl=document.getElementById('volumenControl');
+const volLab=document.getElementById('volLab');
+const estado=document.getElementById('estado');
+const estadoTexto=document.getElementById('estadoTexto');
+const URL_STREAM="https://lagota.online:8000/lagota";
+let debeSonar=false, reproduciendo=false, intentos=0, timer=null;
+
+function setEstado(tipo,texto){estado.className='pill '+tipo;estadoTexto.textContent=texto}
+function iniciar(){
+  debeSonar=true;clearTimeout(timer);timer=null;
+  audio.volume=volumenControl.value/100;
+  audio.src=URL_STREAM+(URL_STREAM.includes('?')?'&':'?')+'_t='+Date.now();
+  audio.load();
+  setEstado('rec','Conectando...');
+  const p=audio.play();
+  if(p&&p.then){p.then(()=>{reproduciendo=true;intentos=0;btnPlay.textContent='⏸';setEstado('ok','En vivo');if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing'}).catch(()=>{programar()})}
+}
+function detener(){
+  debeSonar=false;clearTimeout(timer);timer=null;
+  audio.pause();reproduciendo=false;btnPlay.textContent='▶';setEstado('','Listo para sonar');
+  if('mediaSession' in navigator)navigator.mediaSession.playbackState='paused';
+}
+function programar(){
+  if(!debeSonar||timer)return;
+  intentos++;
+  const espera=Math.min(15000,2000*intentos);
+  setEstado('rec','Reconectando... ('+intentos+')');
+  timer=setTimeout(()=>{timer=null;if(debeSonar)iniciar()},espera);
+}
+btnPlay.addEventListener('click',()=>{reproduciendo?detener():iniciar()});
+audio.addEventListener('error',programar);
+audio.addEventListener('stalled',programar);
+audio.addEventListener('ended',programar);
+audio.addEventListener('pause',()=>{if(debeSonar)programar()});
+document.addEventListener('visibilitychange',()=>{
+  document.body.classList.toggle('pausa',document.visibilityState!=='visible');
+  if(document.visibilityState==='visible'&&debeSonar&&audio.paused){clearTimeout(timer);timer=null;iniciar()}
+});
+volumenControl.addEventListener('input',()=>{audio.volume=volumenControl.value/100;volLab.textContent=volumenControl.value+'%'});
+if('mediaSession' in navigator){
+  navigator.mediaSession.metadata=new MediaMetadata({title:'Radio La Gota 107.5 FM',artist:'En vivo',album:'La Gota Que Faltaba',artwork:[{src:'https://i.imgur.com/sJFQNSB.jpeg',sizes:'512x512',type:'image/jpeg'}]});
+  navigator.mediaSession.setActionHandler('play',iniciar);
+  navigator.mediaSession.setActionHandler('pause',detener);
+}
+let eventoInstalar=null;
+const botonInstalar=document.getElementById('botonInstalar');
+if(botonInstalar)botonInstalar.style.display='none';
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();eventoInstalar=e;if(botonInstalar)botonInstalar.style.display='block'});
+window.addEventListener('appinstalled',()=>{eventoInstalar=null;if(botonInstalar)botonInstalar.style.display='none'});
+if(botonInstalar)botonInstalar.addEventListener('click',async()=>{if(!eventoInstalar){alert('✅ La aplicación ya está instalada');return}const r=await eventoInstalar.prompt();if(r.outcome==='accepted')eventoInstalar=null});
+function mostrarSeccion(id){const e=document.getElementById(id);e.style.display=e.style.display==='block'?'none':'block'}
+function copiarTexto(t){navigator.clipboard.writeText(t).then(()=>alert('Copiado'))}
+function compartirApp(){const url='https://radio.lagota.online/';if(navigator.share)navigator.share({title:'Radio La Gota 107.5 FM',text:'Escuchá La Gota en vivo',url:url});else alert('Compartí: '+url)}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('service-worker.js').catch(()=>{})})}
+</script>
+</body>
+</html>
